@@ -1,0 +1,123 @@
+<section class="page-hero center" style="text-align:center">
+  <div class="wrap">
+    <span class="eyebrow reveal">AI Control &amp; Security</span>
+    <h1 class="h1 reveal reveal-d1" style="font-size:var(--text-3xl)">AI should follow your rules.</h1>
+    <p class="lead reveal reveal-d2">Decide where automation acts and where your team decides. See every action. Keep your data where you choose — and keep your own copy.</p>
+    <div class="btn-row reveal reveal-d3" style="justify-content:center"><a class="btn btn--primary btn--lg" href="#matrix">Explore Controls</a><a class="btn btn--ghost btn--lg" href="#security">Security and data</a></div>
+  </div>
+</section>
+
+<nav class="subnav" aria-label="Section navigation"><div class="wrap"><a href="#matrix">AI Control Matrix</a><a href="#gates">Approval gates</a><a href="#configuration">Configuration</a><a href="#audit">Audit trail</a><a href="#residency">Data residency</a><a href="#backups">Backups</a><a href="#security">Security</a></div></nav>
+
+<section class="section" id="matrix">
+  <div class="wrap split" style="align-items:start">
+    <div class="split-copy sticky-col reveal">
+      <span class="eyebrow"><span class="num">01</span> AI Control Matrix</span>
+      <h2 class="h2">Switch AI on, off, or to review — action by action.</h2>
+      <p class="lead">Every supported action can be set to <b class="ink">Automate</b>, <b class="ink">Review first</b> or <b class="ink">Manual</b>. Try it: changes are counted and logged, just as they are in the product.</p>
+      <div class="note-box"><i data-lucide="lock"></i><span><b>Some actions are always human.</b> Accepting a document as evidence, setting a governing legal deadline and lodging an application cannot be automated.</span></div>
+    </div>
+    <div class="matrix reveal reveal-d1" data-matrix></div>
+  </div>
+</section>
+
+<section class="section section--alt" id="gates">
+  <div class="wrap">
+    <div class="sec-head center"><span class="eyebrow"><span class="num">02</span> Human in the loop</span><h2 class="h1">Approval gates at every consequential step.</h2><p class="lead">Quantum prepares. An authorised person decides.</p></div>
+    <div class="grid g4">
+      <div class="card reveal"><span class="ui-label">Gate 1</span><h3 class="h3">Document acceptance</h3><p>Checked documents wait for the consultant to accept or return them.</p></div>
+      <div class="card reveal reveal-d1"><span class="ui-label">Gate 2</span><h3 class="h3">Forms and prefill</h3><p>Every mapped and prefilled entry is verified before anything is submitted.</p></div>
+      <div class="card reveal reveal-d2"><span class="ui-label">Gate 3</span><h3 class="h3">Outgoing replies</h3><p>Drafts to clients and the Department are approved before they’re sent.</p></div>
+      <div class="card reveal reveal-d3"><span class="ui-label">Gate 4</span><h3 class="h3">Library updates</h3><p>Proposed changes to rules, fees and templates apply only after approval.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="configuration">
+  <div class="wrap split">
+    <div class="split-copy reveal">
+      <span class="eyebrow"><span class="num">03</span> Configuration</span>
+      <h2 class="h2">Your workflows, not ours.</h2>
+      <p class="lead">Pipelines, stages, checklists, naming conventions, reminder cadence, templates and internal SLAs are all configured by your practice. AI behaviour is set through configuration — it doesn’t quietly learn new habits.</p>
+      <ul class="bullets">
+        <li><i data-lucide="check"></i><span><b>Exception handoffs</b> route unclear requests, unsuitable documents and low-confidence results to a person.</span></li>
+        <li><i data-lucide="check"></i><span><b>Matter-level overrides</b> for sensitive or complex files.</span></li>
+      </ul>
+    </div>
+    <div class="panel reveal reveal-d1" style="box-shadow:inset 0 0 0 1px var(--line), var(--shadow-lg);padding:var(--space-6)">
+      <div class="panel-head"><div><h3 class="h3">Workflow rules · Subclass 190</h3><p>Practice configuration</p></div><span class="tag">Saved</span></div>
+      <div>
+        <div class="ui-row"><div class="grow"><b>Send first document request</b><small>When the service agreement is signed</small></div><button class="switch" role="switch" aria-checked="true" aria-label="Send first document request" data-switch></button></div>
+        <div class="ui-row"><div class="grow"><b>Reminder cadence</b><small>Every 5 business days · maximum 4</small></div><span class="ui-btn">Edit</span></div>
+        <div class="ui-row"><div class="grow"><b>Pause chasing on sensitive matters</b><small>Manual follow-up only</small></div><button class="switch" role="switch" aria-checked="false" aria-label="Pause chasing on sensitive matters" data-switch></button></div>
+        <div class="ui-row"><div class="grow"><b>Move to Preparation</b><small>When checklist is 100% accepted</small></div><button class="switch" role="switch" aria-checked="true" aria-label="Move to Preparation automatically" data-switch></button></div>
+        <div class="ui-row"><div class="grow"><b>Internal SLA · preparation</b><small>10 business days</small></div><span class="ui-btn">Edit</span></div>
+        <div class="ui-row"><div class="grow"><b>File naming convention</b><small class="mono">Type_Initials_DD-MM-YYYY</small></div><span class="ui-btn">Edit</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt" id="audit">
+  <div class="wrap split split--rev">
+    <div class="split-copy reveal">
+      <span class="eyebrow"><span class="num">04</span> Audit trail</span>
+      <h2 class="h2">A complete record of AI and people.</h2>
+      <p class="lead">Each event records the time, whether it was AI or a person, who, what action, on which matter, and the result. Administrators can review, download and send logs for compliance purposes.</p>
+      <button class="btn btn--dark" data-audit-export style="justify-self:start"><i data-lucide="download"></i>Download a sample log (CSV)</button>
+      <p class="xs muted">The sample contains masked, illustrative events.</p>
+    </div>
+    <div class="panel reveal reveal-d1" style="box-shadow:inset 0 0 0 1px var(--line), var(--shadow-lg)">
+      <div class="panel-head"><div><h3 class="h3">Activity</h3><p>All matters · today</p></div><span class="tag">8 events</span></div>
+      <div class="timeline" data-audit></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="residency">
+  <div class="wrap">
+    <div class="sec-head sec-head--split"><div class="stack"><span class="eyebrow"><span class="num">05</span> Data residency and backups</span><h2 class="h1">Your data. Your control. Always.</h2></div><p class="lead">Australian data residency is available, with hosting set per practice tenant. Monthly backups go to a supported destination your practice selects.</p></div>
+    <div class="sec-grid">
+      <div class="panel span-3" data-options>
+        <div class="panel-head"><div><h3 class="h3">Hosting region</h3><p>Tenant-level setting, confirmed in your agreement.</p></div><i data-lucide="map-pin" style="width:18px;height:18px;color:var(--muted)"></i></div>
+        <div class="options" role="radiogroup" aria-label="Hosting region">
+          <button class="opt" role="radio" aria-checked="true" data-out="Primary storage, backups and processing boundaries for Australia are documented in your agreement."><span class="radio"></span><span class="grow">Australia<small>Australian data residency</small></span><span class="badge badge--live">Available</span></button>
+          <button class="opt" role="radio" aria-checked="false" data-out="Supported countries and their storage, backup, AI processing and subprocessor boundaries are confirmed before go-live."><span class="radio"></span><span class="grow">Another supported country<small>For practices with offshore requirements</small></span><span class="badge">On request</span></button>
+        </div>
+        <p class="xs muted" data-opt-out>Primary storage, backups and processing boundaries for Australia are documented in your agreement.</p>
+      </div>
+      <div class="panel span-3" id="backups" data-options>
+        <div class="panel-head"><div><h3 class="h3">Monthly automatic backup</h3><p>Destination selected by your practice.</p></div><i data-lucide="hard-drive-download" style="width:18px;height:18px;color:var(--muted)"></i></div>
+        <div class="options" role="radiogroup" aria-label="Backup destination">
+          <button class="opt" role="radio" aria-checked="true" data-out="Next backup · Sun 1 Nov 2026 · 2:00 am AEDT → Microsoft OneDrive / SharePoint"><span class="radio"></span><span class="grow">Microsoft OneDrive / SharePoint</span></button>
+          <button class="opt" role="radio" aria-checked="false" data-out="Next backup · Sun 1 Nov 2026 · 2:00 am AEDT → Google Drive"><span class="radio"></span><span class="grow">Google Drive</span></button>
+          <button class="opt" role="radio" aria-checked="false" data-out="Next backup · Sun 1 Nov 2026 · 2:00 am AEDT → other supported destination"><span class="radio"></span><span class="grow">Other supported destination</span></button>
+        </div>
+        <p class="xs muted" data-opt-out>Next backup · Sun 1 Nov 2026 · 2:00 am AEDT → Microsoft OneDrive / SharePoint</p>
+      </div>
+    </div>
+    <p class="xs muted mt-4">Supported destinations, backup scope, format and restoration steps are confirmed during onboarding.</p>
+  </div>
+</section>
+
+<section class="section section--alt" id="security">
+  <div class="wrap-narrow">
+    <div class="sec-head"><span class="eyebrow"><span class="num">06</span> Security</span><h2 class="h2">What is stored, processed, retained and exported.</h2><p class="lead">Plain answers, so your practice can meet its privacy and record-keeping obligations.</p></div>
+    <div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Area</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td>Stored</td><td>Client and matter records, documents, the communications you connect, settings and the audit log — in your tenant’s hosting region.</td></tr>
+        <tr><td>Processed</td><td>AI reads only the email accounts and documents you authorise, to classify, check, extract and draft. Processing locations, including AI inference and subprocessors, are documented in your agreement.</td></tr>
+        <tr><td>Retained</td><td>According to your practice’s retention settings and your record-keeping obligations as a migration practice.</td></tr>
+        <tr><td>Exported</td><td>Audit logs on demand, monthly backups to your selected destination, and a full data export on request or exit.</td></tr>
+        <tr><td>Access</td><td>Role-based permissions for practice owners, registered migration agents, case officers and scoped sponsor HR users.</td></tr>
+        <tr><td>Privacy</td><td>Designed to support your obligations under the <i>Privacy Act 1988</i> and the Australian Privacy Principles. Personal information is masked in all public product imagery.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note-box mt-8"><i data-lucide="file-text"></i><span>Need detail for your own risk assessment? We provide security and data-handling documentation on request. <a class="link" href="/support#contact">Contact us</a></span></div>
+  </div>
+</section>
+
+<section class="section--tight">
+  <div class="wrap"><div class="cta-band"><div><h2 class="h2">Explore the controls with your settings.</h2><p>We’ll configure a demonstration tenant around your practice rules.</p></div><div class="btn-row"><a class="btn btn--primary btn--lg" href="/book-demo">Book a Demo</a></div></div></div>
+</section>

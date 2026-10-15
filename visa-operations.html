@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visa Operations — Quantum Visa Manager</title>
+<meta name="description" content="Document-to-checklist and document-to-form workflows, post-lodgement correspondence tasking, a living visa library and indicative timeline and fee estimates for Australian migration practices.">
+<meta property="og:title" content="Visa Operations — Quantum Visa Manager">
+<meta property="og:description" content="Document-to-checklist and document-to-form workflows, post-lodgement correspondence tasking, a living visa library and indicative timeline and fee estimates for Australian migration practices.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/consultant.webp">
+<meta name="theme-color" content="#fbfbfa">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js" defer></script>
+<script src="js/site.js" defer></script>
+</head>
+<body data-page="platform">
+<main id="main">
+<section class="page-hero">
+  <div class="wrap">
+    <nav class="crumbs reveal" aria-label="Breadcrumb"><a href="platform.html">Platform</a><span>/</span><span>Visa Operations</span></nav>
+    <h1 class="h1 reveal reveal-d1" style="font-size:var(--text-3xl);max-width:17ch">How much of your day is spent chasing, checking and re-entering?</h1>
+    <p class="lead reveal reveal-d2">Quantum Visa Manager takes on the repetitive administration of every matter — so your consultants spend their time on advice, review and clients.</p>
+    <div class="btn-row reveal reveal-d3"><a class="btn btn--primary btn--lg" href="#workflow">See the Workflow</a><a class="btn btn--ghost btn--lg" href="book-demo.html">Book a Demo</a></div>
+  </div>
+</section>
+
+<section class="section--tight" style="padding-top:0">
+  <div class="wrap">
+    <div class="photo photo--wide reveal" style="aspect-ratio:21/9"><img src="assets/consultant.webp" alt="A migration agent reviewing a document at a laptop in a Sydney office overlooking the harbour"></div>
+  </div>
+</section>
+
+<section class="section" id="workflow">
+  <div class="wrap">
+    <div class="sec-head center"><span class="eyebrow">Two core workflows</span><h2 class="h1">From attachment to checklist. From document to form.</h2><p class="lead">Short, captioned walkthroughs. Personal information is masked. The consultant signs off where it matters.</p></div>
+    <div class="grid g2">
+      <div class="reveal"><div data-clip="docs"></div><p class="small muted mt-4 measure-sm">Quantum detects incoming documents, checks them against the visa requirements, files them, updates the checklist and requests your review.</p></div>
+      <div class="reveal reveal-d1"><div data-clip="forms"></div><p class="small muted mt-4 measure-sm">Verified details map into the applicable forms; the browser extension prefills government web forms for you to check.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt">
+  <div class="wrap">
+    <div class="sec-head sec-head--split"><div class="stack"><span class="eyebrow">Ten operational capabilities</span><h2 class="h2">Everything that keeps a matter moving.</h2></div><p class="lead">Select a capability to see it in the product.</p></div>
+    <div class="explorer" data-explorer></div>
+  </div>
+</section>
+
+<section class="section" id="post-lodgement">
+  <div class="wrap split">
+    <div class="split-copy reveal">
+      <span class="eyebrow">Post-lodgement</span>
+      <h2 class="h2">Department and client emails, turned into tasks.</h2>
+      <p class="lead">After lodgement, correspondence volume rises and important requests are easy to miss. Quantum reads each authorised email, interprets the request in the chain, creates the task, assigns the owner and drafts the response.</p>
+      <ul class="bullets">
+        <li><i data-lucide="check"></i><span>Triggered by <b>receipt and understanding of correspondence</b> — not only by rule changes.</span></li>
+        <li><i data-lucide="check"></i><span>Proposed dates are shown alongside the <b>practitioner-verified legal deadline</b>, which alone governs.</span></li>
+        <li><i data-lucide="check"></i><span>Milestone updates to clients go out <b>only in the forms you’ve approved</b>.</span></li>
+      </ul>
+    </div>
+    <div class="reveal reveal-d1"><div data-clip="corr"></div></div>
+  </div>
+</section>
+
+<section class="section section--alt" id="library">
+  <div class="wrap split split--rev">
+    <div class="split-copy reveal">
+      <span class="eyebrow">Regulatory library</span>
+      <h2 class="h2">Government changes become approved updates.</h2>
+      <p class="lead">Changes to visa rules, forms, timelines, fees and documentary requirements are detected, assessed for impact and proposed for your approval. Once approved, they flow through checklists, templates, estimators and the visa library your consultants use.</p>
+    </div>
+    <div class="reveal reveal-d1"><div data-clip="library"></div></div>
+  </div>
+</section>
+
+<section class="section" id="estimates">
+  <div class="wrap">
+    <div class="sec-head center"><span class="eyebrow">Timeline and fee estimates</span><h2 class="h1">Set clear expectations from day one.</h2><p class="lead">Try the estimators with your own figures. In the product, reference values come from your approved visa library and fee schedule.</p></div>
+    <div class="grid g2" style="align-items:start">
+      <div class="panel reveal" data-estimator style="padding:var(--space-8)">
+        <div class="panel-head"><div><h3 class="h3">Indicative end-to-end timeline</h3><p>Internal SLAs plus a published processing benchmark.</p></div><span class="tag">Estimate</span></div>
+        <div class="row2">
+          <div class="field"><label for="e1">Document collection (days)</label><input class="input" id="e1" name="docs" type="number" min="0" value="21"></div>
+          <div class="field"><label for="e2">Preparation and review (days)</label><input class="input" id="e2" name="prep" type="number" min="0" value="10"></div>
+          <div class="field"><label for="e3">Client confirmation (days)</label><input class="input" id="e3" name="conf" type="number" min="0" value="3"></div>
+          <div class="field"><label for="e4">Processing benchmark (months)</label><input class="input" id="e4" name="bench" type="number" min="0" step="0.5" value="6"><span class="hint">Sample value — use the Department’s current published figure.</span></div>
+        </div>
+        <div class="est-bar" aria-hidden="true"><div class="a a1">Docs</div><div class="a a2" style="opacity:.82">Prep</div><div class="c a3"></div><div class="b b1">Department processing</div></div>
+        <dl class="kv" style="font-size:14px"><dt>Internal work</dt><dd data-int></dd><dt>Indicative total</dt><dd data-tot></dd></dl>
+        <p class="xs muted">An estimate only — not a guarantee of processing time or outcome.</p>
+      </div>
+      <div class="panel reveal reveal-d1" data-fee-est style="padding:var(--space-8)">
+        <div class="panel-head"><div><h3 class="h3">Client cost estimate</h3><p>Disbursements and professional fees, itemised.</p></div><span class="tag">Estimate</span></div>
+        <div class="row2">
+          <div class="field"><label for="f1">Base visa application charge (AUD)</label><input class="input" id="f1" name="base" type="number" min="0" value="4000"></div>
+          <div class="field"><label for="f5">Professional fee (AUD, excl. GST)</label><input class="input" id="f5" name="fee" type="number" min="0" value="3500"></div>
+          <div class="field"><label for="f2">Additional applicants 18+</label><input class="input" id="f2" name="adult" type="number" min="0" value="1"></div>
+          <div class="field"><label for="f3">Charge per additional adult (AUD)</label><input class="input" id="f3" name="adultc" type="number" min="0" value="2000"></div>
+          <div class="field"><label for="f4">Additional applicants under 18</label><input class="input" id="f4" name="child" type="number" min="0" value="1"></div>
+          <div class="field"><label for="f6">Charge per child (AUD)</label><input class="input" id="f6" name="childc" type="number" min="0" value="1000"></div>
+        </div>
+        <div>
+          <div class="ui-row"><div class="grow"><b>Visa application charges (disbursement)</b></div><span class="mono" data-vac></span></div>
+          <div class="ui-row"><div class="grow"><b>Professional fees</b></div><span class="mono" data-prof></span></div>
+          <div class="ui-row"><div class="grow"><b>GST on professional fees (10%)</b></div><span class="mono" data-gst></span></div>
+          <div class="ui-row"><div class="grow"><b style="font-weight:600">Estimated total</b></div><span class="mono" style="font-weight:600" data-total></span></div>
+        </div>
+        <p class="xs muted">Sample figures for illustration. Use current charges from the Department and your own fee schedule. An estimate only.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section--tight">
+  <div class="wrap"><div class="cta-band"><div><h2 class="h2">See the workflow on your own visa streams.</h2><p>Bring a matter type you handle every week — we’ll show it end to end.</p></div><div class="btn-row"><a class="btn btn--primary btn--lg" href="book-demo.html">See the Workflow</a><a class="btn btn--ghost btn--lg" href="how-it-works.html">How It Works</a></div></div></div>
+</section>
+</main>
+
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://perplexity.localhost","http://localhost:1420","http://127.0.0.1:1420","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  const DEFAULT_LINE_HEIGHT = 16;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  const PICK_CAPABILITIES = ["pick"];
+  const PICK_CHAIN_LENGTH = 4;
+  const PICK_MAX_TEXT_CHARS = 120;
+  const PICK_MAX_HTML_CHARS = 300;
+
+  function truncate(value, maxChars) {
+    return value.length > maxChars ? value.slice(0, maxChars - 1) + "…" : value;
+  }
+
+  function isPickableElement(element) {
+    return (
+      element instanceof Element &&
+      element !== document.documentElement &&
+      element !== document.body
+    );
+  }
+
+  function resolvePickTarget(x, y) {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    const element = document.elementFromPoint(x, y);
+    return isPickableElement(element) ? element.closest("svg") || element : null;
+  }
+
+  function pickLabel(element) {
+    if (element.id) return element.localName + "#" + element.id;
+    return [element.localName].concat(Array.from(element.classList).slice(0, 2)).join(".");
+  }
+
+  // Only attributes that help find the element in source. data-* values and URL
+  // query strings or fragments can carry tokens.
+  const PICK_ATTRIBUTES = new Set([
+    "id",
+    "class",
+    "name",
+    "type",
+    "role",
+    "alt",
+    "aria-label",
+    "href",
+    "src",
+  ]);
+
+  function pickAttributeValue(attribute) {
+    return attribute.name === "href" || attribute.name === "src"
+      ? attribute.value.split(/[?#]/)[0]
+      : attribute.value;
+  }
+
+  function describePickElement(element) {
+    const chain = [];
+    for (
+      let current = element;
+      isPickableElement(current) && chain.length < PICK_CHAIN_LENGTH;
+      current = current.parentElement
+    ) {
+      chain.unshift(current);
+    }
+    const attributes = Array.from(element.attributes)
+      .filter((attribute) => PICK_ATTRIBUTES.has(attribute.name))
+      .map((attribute) => ` ${attribute.name}="${pickAttributeValue(attribute).replace(/"/g, "&quot;")}"`)
+      .join("");
+    const text = (element.innerText || element.textContent || "").replace(/\s+/g, " ").trim();
+    return {
+      chain: chain.map(pickLabel),
+      html: truncate(`<${element.localName}${attributes}>`, PICK_MAX_HTML_CHARS),
+      text: text ? truncate(text, PICK_MAX_TEXT_CHARS) : undefined,
+    };
+  }
+
+  // Hover asks once per frame, and innerText on a large section forces layout,
+  // so only the rect is re-read while the pointer stays on the same element.
+  // Clicks ask for fresh details since the page may have changed the element.
+  let lastPick = null;
+
+  function describePickTarget(element, fresh) {
+    if (fresh || lastPick?.element !== element) {
+      lastPick = { element, details: describePickElement(element) };
+    }
+    const rect = element.getBoundingClientRect();
+    return {
+      rect: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+      ...lastPick.details,
+    };
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      capabilities: PICK_CAPABILITIES,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_PICK") {
+      const element = resolvePickTarget(event.data.x, event.data.y);
+      postToTrustedTop({
+        type: "INLINE_EDIT_PICK_RESULT",
+        seq: event.data.seq,
+        target: element ? describePickTarget(element, event.data.fresh === true) : null,
+      });
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_BY") {
+      const { deltaX, deltaY, deltaMode } = event.data;
+      if (!scrollForwarding || !Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return;
+      if (deltaMode !== 0 && deltaMode !== 1 && deltaMode !== 2) return;
+      const lineHeight =
+        parseFloat(getComputedStyle(document.documentElement).lineHeight) || DEFAULT_LINE_HEIGHT;
+      const scaleX = deltaMode === 1 ? lineHeight : deltaMode === 2 ? window.innerWidth : 1;
+      const scaleY = deltaMode === 1 ? lineHeight : deltaMode === 2 ? window.innerHeight : 1;
+      // The selection overlay receives the wheel event instead of this iframe.
+      // Instant scrolling preserves trackpad deltas even on smooth-scroll sites.
+      window.scrollBy({ left: deltaX * scaleX, top: deltaY * scaleY, behavior: "instant" });
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+
+</script></body>
+</html>
