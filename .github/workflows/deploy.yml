@@ -1,0 +1,410 @@
+name: Deploy Quantum Visa Manager to Hostinger
+
+# Production cutover is OFF until vars.QVM_PRODUCTION_CUTOVER_ENABLED == 'true'.
+# Portal inputs (deployer_*) and gated release inputs are both accepted.
+
+run-name: Deploy Quantum Visa Manager by ${{ inputs.deployer_email || github.actor }}
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '.github/workflows/**'
+      - 'docs/**'
+      - '**.md'
+  workflow_dispatch:
+    inputs:
+      release_commit:
+        description: Exact 40-character main commit to build and deploy (required when cutover is enabled)
+        required: false
+        type: string
+        default: ''
+      confirm_production:
+        description: Type DEPLOY to request the protected production job
+        required: false
+        type: string
+        default: ''
+      deployer_email:
+        description: Email of the portal operator who triggered deployment
+        required: false
+        type: string
+        default: 'unknown'
+      deployer_name:
+        description: Display name of the portal operator
+        required: false
+        type: string
+        default: 'unknown'
+      triggered_from:
+        description: Source system that requested the dispatch
+        required: false
+        type: string
+        default: 'GitHub'
+
+concurrency:
+  group: deploy-qvm-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    name: Build Quantum Visa Manager release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      artifact_sha256: ${{ steps.package.outputs.sha256 }}
+      release_commit: ${{ steps.resolve.outputs.release_commit }}
+    steps:
+      - name: Resolve and verify release commit
+        id: resolve
+        env:
+          DISPATCHED_COMMIT: ${{ github.sha }}
+          REQUESTED_COMMIT: ${{ inputs.release_commit }}
+          EVENT_NAME: ${{ github.event_name }}
+          CUTOVER: ${{ vars.QVM_PRODUCTION_CUTOVER_ENABLED }}
+          CONFIRM: ${{ inputs.confirm_production }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
+            if [[ -n "${REQUESTED_COMMIT:-}" ]]; then
+              [[ "$REQUESTED_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+              test "$REQUESTED_COMMIT" = "$DISPATCHED_COMMIT"
+              RELEASE_COMMIT="$REQUESTED_COMMIT"
+            else
+              RELEASE_COMMIT="$DISPATCHED_COMMIT"
+            fi
+            if [[ "${CUTOVER:-}" == 'true' ]]; then
+              [[ "$CONFIRM" == 'DEPLOY' ]]
+              [[ "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+              test "$RELEASE_COMMIT" = "$DISPATCHED_COMMIT"
+            fi
+          else
+            RELEASE_COMMIT="$DISPATCHED_COMMIT"
+          fi
+          echo "release_commit=$RELEASE_COMMIT" >> "$GITHUB_OUTPUT"
+
+      - name: Check out release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve.outputs.release_commit }}
+          persist-credentials: false
+
+      - name: Confirm checked-out commit
+        env:
+          RELEASE_COMMIT: ${{ steps.resolve.outputs.release_commit }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build production site
+        run: npm run build
+
+      - name: Add deployment marker
+        env:
+          RELEASE_COMMIT: ${{ steps.resolve.outputs.release_commit }}
+          DEPLOYER_EMAIL: ${{ inputs.deployer_email || 'unknown' }}
+          DEPLOYER_NAME: ${{ inputs.deployer_name || 'unknown' }}
+          TRIGGERED_FROM: ${{ inputs.triggered_from || 'GitHub' }}
+        run: |
+          set -euo pipefail
+          {
+            echo "Website: Quantum Visa Manager"
+            echo "Domain: quantumvisamanager.com"
+            echo "Commit: $RELEASE_COMMIT"
+            echo "DeployerEmail: $DEPLOYER_EMAIL"
+            echo "DeployerName: $DEPLOYER_NAME"
+            echo "TriggeredFrom: $TRIGGERED_FROM"
+          } > dist/deploy-info.txt
+
+      - name: Package reproducible release and checksum
+        id: package
+        run: |
+          set -euo pipefail
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -cf - -C dist . | gzip -n > qvm-release.tar.gz
+          sha256sum qvm-release.tar.gz | tee qvm-release.tar.gz.sha256
+          echo "sha256=$(cut -d' ' -f1 qvm-release.tar.gz.sha256)" >> "$GITHUB_OUTPUT"
+
+      - name: Store immutable run artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qvm-${{ steps.resolve.outputs.release_commit }}-${{ steps.package.outputs.sha256 }}
+          path: |
+            qvm-release.tar.gz
+            qvm-release.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 90
+
+  deploy:
+    name: Deploy and verify production release
+    needs: build
+    runs-on: ubuntu-latest
+    environment: Production
+    # Gate: cutover must be explicitly enabled. Do not enable until Hostinger + DNS + secrets are approved.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      vars.QVM_PRODUCTION_CUTOVER_ENABLED == 'true' &&
+      ((github.event_name == 'push') ||
+       (github.event_name == 'workflow_dispatch' &&
+        inputs.confirm_production == 'DEPLOY'))
+    steps:
+      - name: Download immutable release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: qvm-${{ needs.build.outputs.release_commit }}-${{ needs.build.outputs.artifact_sha256 }}
+
+      - name: Verify artifact checksum
+        env:
+          EXPECTED_SHA256: ${{ needs.build.outputs.artifact_sha256 }}
+        run: |
+          set -euo pipefail
+          echo "$EXPECTED_SHA256  qvm-release.tar.gz" | sha256sum --check --status
+          grep -Fx "$EXPECTED_SHA256  qvm-release.tar.gz" qvm-release.tar.gz.sha256
+
+      - name: Validate production configuration (QVM root only)
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
+          HOSTINGER_USERNAME: ${{ secrets.HOSTINGER_USERNAME }}
+          HOSTINGER_SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          HOSTINGER_KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
+          HOSTINGER_TARGET_PATH: ${{ vars.HOSTINGER_TARGET_PATH }}
+          HOSTINGER_TARGET_SUFFIX: ${{ vars.HOSTINGER_TARGET_SUFFIX }}
+          HOSTINGER_PUBLIC_URL: ${{ vars.HOSTINGER_PUBLIC_URL }}
+        run: |
+          set -euo pipefail
+          # Verified Hostinger endpoint + QVM document root (do not accept Ledgerline or other sites).
+          readonly EXPECTED_HOST='92.113.28.62'
+          readonly EXPECTED_PORT='65002'
+          readonly EXPECTED_USER='u359614291'
+          readonly EXPECTED_TARGET='/home/u359614291/domains/quantumvisamanager.com/public_html'
+          readonly EXPECTED_SUFFIX='/domains/quantumvisamanager.com/public_html'
+          readonly FORBIDDEN_LEDGERLINE='/home/u359614291/domains/quantumledgerline.com/public_html'
+
+          for name in HOSTINGER_HOST HOSTINGER_PORT HOSTINGER_USERNAME HOSTINGER_SSH_KEY HOSTINGER_KNOWN_HOSTS HOSTINGER_TARGET_PATH HOSTINGER_TARGET_SUFFIX HOSTINGER_PUBLIC_URL; do
+            [[ -n "${!name:-}" ]] || { echo "Missing required production setting: $name"; exit 1; }
+          done
+          [[ "$HOSTINGER_HOST" == "$EXPECTED_HOST" ]]
+          [[ "$HOSTINGER_PORT" == "$EXPECTED_PORT" ]]
+          [[ "$HOSTINGER_USERNAME" == "$EXPECTED_USER" ]]
+          [[ "$HOSTINGER_TARGET_PATH" == "$EXPECTED_TARGET" ]]
+          [[ "$HOSTINGER_TARGET_SUFFIX" == "$EXPECTED_SUFFIX" ]]
+          [[ "$HOSTINGER_PUBLIC_URL" == 'https://quantumvisamanager.com' ]]
+          [[ "$HOSTINGER_TARGET_PATH" != "$FORBIDDEN_LEDGERLINE" ]]
+          [[ "$HOSTINGER_TARGET_PATH" != *'..'* ]]
+          [[ "$HOSTINGER_TARGET_PATH" != *'quantumledgerline.com'* ]]
+          [[ "$HOSTINGER_TARGET_PATH" != *'quantumledgerlink.com'* ]]
+          [[ "$HOSTINGER_TARGET_PATH" == *'quantumvisamanager.com'* ]]
+          [[ -n "$HOSTINGER_KNOWN_HOSTS" ]]
+          mkdir -p ~/.ssh
+          printf '%s\n' "$HOSTINGER_SSH_KEY" > ~/.ssh/hostinger_key
+          printf '%s\n' "$HOSTINGER_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/hostinger_key ~/.ssh/known_hosts
+
+      - name: Verify exact canonical QVM target over strict SSH
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
+          HOSTINGER_USERNAME: ${{ secrets.HOSTINGER_USERNAME }}
+          HOSTINGER_TARGET_PATH: ${{ vars.HOSTINGER_TARGET_PATH }}
+          HOSTINGER_TARGET_SUFFIX: ${{ vars.HOSTINGER_TARGET_SUFFIX }}
+        run: |
+          set -euo pipefail
+          readonly EXPECTED_TARGET='/home/u359614291/domains/quantumvisamanager.com/public_html'
+          readonly FORBIDDEN_LEDGERLINE='/home/u359614291/domains/quantumledgerline.com/public_html'
+          [[ "$HOSTINGER_TARGET_PATH" == "$EXPECTED_TARGET" ]]
+          ssh_opts=(-o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30 -i ~/.ssh/hostinger_key -p "$HOSTINGER_PORT")
+          printf -v target_q '%q' "$HOSTINGER_TARGET_PATH"
+          printf -v suffix_q '%q' "$HOSTINGER_TARGET_SUFFIX"
+          printf -v expected_q '%q' "$EXPECTED_TARGET"
+          printf -v forbidden_q '%q' "$FORBIDDEN_LEDGERLINE"
+          ssh "${ssh_opts[@]}" "$HOSTINGER_USERNAME@$HOSTINGER_HOST" \
+            "set -euo pipefail; target=\$(realpath -e -- $target_q); home=\$(realpath -e -- \"\$HOME\"); suffix=$suffix_q; forbidden=\$(realpath -e -- $forbidden_q); test -d \"\$target\"; test \"\$target\" = \"\$home\$suffix\"; test \"\$target\" = $expected_q; test \"\$target\" != /; test \"\$target\" != \"\$home\"; test \"\$target\" != \"\$forbidden\"; case \"\$target\" in *quantumledgerline.com*|*quantumledgerlink.com*) exit 1 ;; esac; test -r \"\$target\" -a -w \"\$target\"; printf '%s\\n' TARGET_OK"
+
+      - name: Capture and verify pre-deployment production backup
+        id: snapshot
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
+          HOSTINGER_USERNAME: ${{ secrets.HOSTINGER_USERNAME }}
+          HOSTINGER_TARGET_PATH: ${{ vars.HOSTINGER_TARGET_PATH }}
+          RELEASE_COMMIT: ${{ needs.build.outputs.release_commit }}
+        run: |
+          set -euo pipefail
+          ssh_opts=(-o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30 -i ~/.ssh/hostinger_key -p "$HOSTINGER_PORT")
+          printf -v target_q '%q' "$HOSTINGER_TARGET_PATH"
+          printf -v commit_q '%q' "$RELEASE_COMMIT"
+          backup_output=$(ssh "${ssh_opts[@]}" "$HOSTINGER_USERNAME@$HOSTINGER_HOST" \
+            "set -euo pipefail; target=$target_q; commit=$commit_q; run_id=$GITHUB_RUN_ID; backup_dir=\"\$HOME/deployment_backups/qvm-production\"; umask 077; mkdir -p \"\$backup_dir\"; archive=\"\$backup_dir/backup-\$(date -u +%Y%m%d-%H%M%S)-\$run_id-\$commit.tar.gz\"; tar -czf \"\$archive\" -C \"\$target\" .; tar -tzf \"\$archive\" >/dev/null; tar -tvzf \"\$archive\" | awk '\$1 !~ /^[-d]/ {bad=1} END {exit bad}'; test -s \"\$archive\"; sha256sum \"\$archive\" | awk '{print \"BACKUP_SHA256:\"\$1}'; printf 'BACKUP_NAME:%s\\n' \"\$(basename \"\$archive\")\"; printf '%s\\n' BACKUP_OK")
+          printf '%s\n' "$backup_output" | grep -E '^BACKUP_(SHA256|NAME):'
+          backup_name=$(printf '%s\n' "$backup_output" | sed -n 's/^BACKUP_NAME://p')
+          [[ "$backup_name" =~ ^backup-[0-9]{8}-[0-9]{6}-[0-9]+-[a-f0-9]{40}\.tar\.gz$ ]]
+          printf 'backup_name=%s\n' "$backup_name" >> "$GITHUB_OUTPUT"
+
+      - name: Overlay release without deleting unrelated or persistent files
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
+          HOSTINGER_USERNAME: ${{ secrets.HOSTINGER_USERNAME }}
+          HOSTINGER_TARGET_PATH: ${{ vars.HOSTINGER_TARGET_PATH }}
+        run: |
+          set -euo pipefail
+          ssh_opts=(-o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30 -i ~/.ssh/hostinger_key -p "$HOSTINGER_PORT")
+          printf -v target_q '%q' "$HOSTINGER_TARGET_PATH"
+          gzip -dc qvm-release.tar.gz | tar -xOf - >/dev/null
+          gzip -dc qvm-release.tar.gz | ssh "${ssh_opts[@]}" "$HOSTINGER_USERNAME@$HOSTINGER_HOST" \
+            "tar -xf - -C $target_q --no-same-owner --no-same-permissions"
+
+      - name: Verify deployed marker, routes, and static assets
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
+          HOSTINGER_USERNAME: ${{ secrets.HOSTINGER_USERNAME }}
+          HOSTINGER_TARGET_PATH: ${{ vars.HOSTINGER_TARGET_PATH }}
+          HOSTINGER_PUBLIC_URL: ${{ vars.HOSTINGER_PUBLIC_URL }}
+          RELEASE_COMMIT: ${{ needs.build.outputs.release_commit }}
+        run: |
+          set -euo pipefail
+          readonly EXPECTED_TARGET='/home/u359614291/domains/quantumvisamanager.com/public_html'
+          [[ "$HOSTINGER_TARGET_PATH" == "$EXPECTED_TARGET" ]]
+          [[ "$HOSTINGER_PUBLIC_URL" == 'https://quantumvisamanager.com' ]]
+          ssh_opts=(-o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30 -i ~/.ssh/hostinger_key -p "$HOSTINGER_PORT")
+          printf -v target_q '%q' "$HOSTINGER_TARGET_PATH"
+          printf -v commit_q '%q' "$RELEASE_COMMIT"
+          ssh "${ssh_opts[@]}" "$HOSTINGER_USERNAME@$HOSTINGER_HOST" \
+            "grep -Fx 'Commit: '$commit_q $target_q/deploy-info.txt"
+          mkdir -p "$RUNNER_TEMP/qvm-release-check"
+          tar -xzf qvm-release.tar.gz -C "$RUNNER_TEMP/qvm-release-check"
+          index_file="$RUNNER_TEMP/qvm-release-check/index.html"
+          test -s "$index_file"
+          grep -Fq '<div id="root"></div>' "$index_file"
+          mapfile -t static_assets < <(grep -oE '(src|href)="/assets/[^" ]+"' "$index_file" | cut -d '"' -f2 | sort -u)
+          ((${#static_assets[@]} > 0))
+          curl --fail --show-error --silent --retry 3 --retry-delay 5 "$HOSTINGER_PUBLIC_URL/" -o /tmp/qvm-home.html
+          grep -Fq '<div id="root"></div>' /tmp/qvm-home.html
+          curl --fail --show-error --silent --retry 3 --retry-delay 5 "$HOSTINGER_PUBLIC_URL/deploy-info.txt" -o /tmp/deploy-info.txt
+          grep -Fx "Commit: $RELEASE_COMMIT" /tmp/deploy-info.txt
+          for route in platform book-demo pricing privacy; do
+            curl --fail --show-error --silent --retry 3 --retry-delay 5 "$HOSTINGER_PUBLIC_URL/$route" -o "/tmp/qvm-$route.html"
+            grep -Fq '<div id="root"></div>' "/tmp/qvm-$route.html"
+          done
+          for asset in "${static_assets[@]}"; do
+            headers="$(curl --fail --show-error --silent --retry 3 --retry-delay 5 -D - -o /dev/null "$HOSTINGER_PUBLIC_URL$asset")"
+            printf '%s\n' "$headers" | tr -d '\r' | grep -qiE '^content-type:.*(javascript|css|image|font|svg|webp|text)'
+          done
+
+      - name: Restore pre-deployment snapshot after a release failure
+        if: failure() && steps.snapshot.outcome == 'success'
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
+          HOSTINGER_USERNAME: ${{ secrets.HOSTINGER_USERNAME }}
+          HOSTINGER_TARGET_PATH: ${{ vars.HOSTINGER_TARGET_PATH }}
+          HOSTINGER_TARGET_SUFFIX: ${{ vars.HOSTINGER_TARGET_SUFFIX }}
+          BACKUP_NAME: ${{ steps.snapshot.outputs.backup_name }}
+          HOSTINGER_PUBLIC_URL: ${{ vars.HOSTINGER_PUBLIC_URL }}
+        run: |
+          set -euo pipefail
+          [[ "$BACKUP_NAME" =~ ^backup-[0-9]{8}-[0-9]{6}-[0-9]+-[a-f0-9]{40}\.tar\.gz$ ]]
+          readonly EXPECTED_TARGET='/home/u359614291/domains/quantumvisamanager.com/public_html'
+          [[ "$HOSTINGER_TARGET_PATH" == "$EXPECTED_TARGET" ]]
+          [[ "$HOSTINGER_TARGET_PATH" != *'quantumledgerline.com'* ]]
+          ssh_opts=(-o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30 -i ~/.ssh/hostinger_key -p "$HOSTINGER_PORT")
+          printf -v target_q '%q' "$HOSTINGER_TARGET_PATH"
+          printf -v suffix_q '%q' "$HOSTINGER_TARGET_SUFFIX"
+          printf -v backup_q '%q' "$BACKUP_NAME"
+          printf -v expected_q '%q' "$EXPECTED_TARGET"
+          ssh "${ssh_opts[@]}" "$HOSTINGER_USERNAME@$HOSTINGER_HOST" \
+            "set -euo pipefail; target=\$(realpath -e -- $target_q); home=\$(realpath -e -- \"\$HOME\"); suffix=$suffix_q; archive=\"\$HOME/deployment_backups/qvm-production/$backup_q\"; test \"\$target\" = \"\$home\$suffix\"; test \"\$target\" = $expected_q; test \"\$target\" != /; test \"\$target\" != \"\$home\"; case \"\$target\" in *quantumledgerline.com*|*quantumledgerlink.com*) exit 1 ;; esac; test -f \"\$archive\"; tar -tzf \"\$archive\" >/dev/null; tar -tvzf \"\$archive\" | awk '\$1 !~ /^[-d]/ {bad=1} END {exit bad}'; find \"\$target\" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +; tar -xzf \"\$archive\" -C \"\$target\" --no-same-owner --no-same-permissions; test -s \"\$target/index.html\" -o -s \"\$target/default.php\""
+          curl --fail --show-error --silent --retry 3 --retry-delay 5 "$HOSTINGER_PUBLIC_URL/" -o /dev/null || true
+
+  notify:
+    name: Email deployment result via Microsoft Graph
+    needs: [build, deploy]
+    if: >-
+      always() &&
+      vars.QVM_PRODUCTION_CUTOVER_ENABLED == 'true' &&
+      vars.GRAPH_NOTIFY_ENABLED == 'true' &&
+      (needs.deploy.result == 'success' || needs.deploy.result == 'failure')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Send Graph mail (success or failure)
+        env:
+          RESULT: ${{ needs.deploy.result }}
+          RELEASE_COMMIT: ${{ needs.build.outputs.release_commit }}
+          DEPLOYER_EMAIL: ${{ inputs.deployer_email || 'unknown' }}
+          DEPLOYER_NAME: ${{ inputs.deployer_name || 'unknown' }}
+          TRIGGERED_FROM: ${{ inputs.triggered_from || 'GitHub' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GRAPH_SENDER: ${{ vars.GRAPH_SENDER_EMAIL || 'support@highvolt.tech' }}
+          GRAPH_RECIPIENT: ${{ vars.GRAPH_ALERT_EMAIL || 'alerts@highvolt.tech' }}
+        run: |
+          set -euo pipefail
+          token="$(az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv)"
+          [[ -n "$token" ]]
+          if [[ "$RESULT" == 'success' ]]; then
+            subject="SUCCESS: Quantum Visa Manager production deploy"
+            status_line="Deployment succeeded."
+          else
+            subject="FAILURE: Quantum Visa Manager production deploy"
+            status_line="Deployment failed. Check the Actions run and Hostinger backup state."
+          fi
+          body=$(printf '%s\n' \
+            "$status_line" \
+            "" \
+            "Website: Quantum Visa Manager" \
+            "Domain: https://quantumvisamanager.com" \
+            "Commit: $RELEASE_COMMIT" \
+            "Deployer: $DEPLOYER_NAME <$DEPLOYER_EMAIL>" \
+            "Triggered from: $TRIGGERED_FROM" \
+            "Run: $RUN_URL")
+          # Escape for JSON
+          body_json=$(python3 -c 'import json,os; print(json.dumps(os.environ["BODY"]))' BODY="$body")
+          subject_json=$(python3 -c 'import json,os; print(json.dumps(os.environ["SUBJECT"]))' SUBJECT="$subject")
+          payload=$(cat <<EOF
+          {
+            "message": {
+              "subject": ${subject_json},
+              "body": { "contentType": "Text", "content": ${body_json} },
+              "toRecipients": [
+                { "emailAddress": { "address": "${GRAPH_RECIPIENT}" } }
+              ]
+            },
+            "saveToSentItems": false
+          }
+          EOF
+          )
+          http_code=$(curl --silent --show-error --output /tmp/graph-mail-response.json --write-out '%{http_code}' \
+            -X POST "https://graph.microsoft.com/v1.0/users/${GRAPH_SENDER}/sendMail" \
+            -H "Authorization: Bearer ${token}" \
+            -H "Content-Type: application/json" \
+            --data "$payload")
+          if [[ "$http_code" != "202" && "$http_code" != "200" ]]; then
+            echo "Graph sendMail returned HTTP $http_code (details redacted)."
+            exit 1
+          fi
+          echo "Notification accepted by Microsoft Graph."
+        continue-on-error: true

@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+
+concurrency:
+  group: ci-qvm-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Lint and production build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Production build
+        run: npm run build
+
+      - name: Verify Vite output and SPA assets
+        run: |
+          set -euo pipefail
+          test -s dist/index.html
+          grep -Fq '<div id="root"></div>' dist/index.html
+          test -f dist/.htaccess
+          test -f dist/robots.txt
+          test -f dist/sitemap.xml
+          test -d dist/assets
+          mapfile -t hashed < <(find dist/assets -type f \( -name '*.js' -o -name '*.css' \) | head -n 20)
+          ((${#hashed[@]} >= 2))

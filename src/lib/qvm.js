@@ -104,13 +104,6 @@
     $$('#mnav a').forEach(a => a.addEventListener('click', () => { mn.classList.remove('is-open'); document.body.classList.remove('nav-open'); }));
   }
 
-  function reveal() {
-    const els = $$('.reveal');
-    if (reduce || !('IntersectionObserver' in window)) { els.forEach(e => e.classList.add('is-in')); return; }
-    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
-    els.forEach(e => io.observe(e));
-  }
-
   /* -------------------------------------------------------- Scene helpers */
   const S = {
     mail: (from, role, subj, body, files = []) => `<div class="ui-card"><div class="mail-head"><span class="avatar">${from.split(' ').map(w => w[0]).join('').slice(0, 2)}</span><div><b>${from}</b><small>${role}</small></div><span class="tag" style="margin-left:auto">Inbox</span></div>
@@ -366,7 +359,7 @@
   }
 
   /* ---------------------------------------------------------- Ops explorer */
-  const W = (title, body, side) => `<div class="win win--flat"><div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-title">${title}</div></div><div class="win-body">${body}</div></div>`;
+  const W = (title, body) => `<div class="win win--flat"><div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-title">${title}</div></div><div class="win-body">${body}</div></div>`;
   const OPS = [
     ['Document requests and reminders', 'Requests are written in your tone and reminders follow the cadence you set — until the document arrives.', () => S.list('Outstanding · VM-2041', 'Subclass 190 · 2 items', [['English test result', 'Requested 09/10 · reminder 16/10', 'warn', 'Chasing', 'tag--warn'], ['Form 80 signature', 'Requested 12/10 · reminder 19/10', 'warn', 'Chasing', 'tag--warn'], ['Birth certificate', 'Received 30/09', true, 'Received']], `<div class="ui-card ui-card--soft" style="margin-top:10px;padding:10px 12px"><div class="ui-label">Next reminder · draft</div><p class="ui-sub" style="margin-top:4px;line-height:1.5">Hi A., a quick reminder that we still need your English test result to keep your application on track…</p></div>`)],
     ['Expiry and requirement checks', 'Each document is checked for type, details, expiry and validity against the requirement set in your visa library.', () => S.checks('Checks · police_cert.pdf', [['Document type: police certificate', 'India · national level'], ['Name matches matter record', 'A. N•••••'], ['Issued 11/09/2026', 'Within your configured validity window'], ['Translation not required', 'Issued in English']])],
@@ -457,10 +450,9 @@
     const keep = { Documents: [0, 4], Forms: [1, 2], Correspondence: [0, 3], 'Visa library': [0], Growth: [0] };
     const DATA = compact ? MATRIX.map(g => [g[0], g[1].filter((r, i) => keep[g[0]].includes(i))]) : MATRIX;
     const L = { auto: 'Automate', review: 'Review first', manual: 'Manual' };
-    let rows = 0;
     el.innerHTML = `<div class="matrix-head"><div><div class="ui-title" style="font-size:15px">AI Control Matrix</div><div class="ui-sub">Practice settings · applies to all matters unless overridden</div></div>
       <div class="matrix-legend"><span><span class="dot" style="color:var(--accent)"></span>Automate — AI acts, logged</span><span><span class="dot" style="color:var(--amber)"></span>Review first — AI drafts, you approve</span><span><span class="dot" style="color:var(--faint)"></span>Manual — your team does it</span></div></div>
-      ${DATA.map(g => `<div class="m-group-title">${g[0]}</div>${g[1].map(r => { rows++; return `<div class="m-row"><div><b>${r[0]}</b><small>${r[1]}${r[3] ? ' · locked' : ''}</small></div><div class="seg" role="radiogroup" aria-label="${r[0]}">${['auto', 'review', 'manual'].map(v => `<button role="radio" data-v="${v}" aria-checked="${v === r[2]}" ${r[3] && v !== r[2] ? 'data-locked aria-disabled="true"' : ''}>${L[v]}</button>`).join('')}</div></div>`; }).join('')}`).join('')}
+      ${DATA.map(g => `<div class="m-group-title">${g[0]}</div>${g[1].map(r => `<div class="m-row"><div><b>${r[0]}</b><small>${r[1]}${r[3] ? ' · locked' : ''}</small></div><div class="seg" role="radiogroup" aria-label="${r[0]}">${['auto', 'review', 'manual'].map(v => `<button role="radio" data-v="${v}" aria-checked="${v === r[2]}" ${r[3] && v !== r[2] ? 'data-locked aria-disabled="true"' : ''}>${L[v]}</button>`).join('')}</div></div>`).join('')}`).join('')}
       <div class="matrix-foot"><span><b data-c="auto">0</b> automated · <b data-c="review">0</b> review first · <b data-c="manual">0</b> manual</span><span data-log>Every change is recorded in the audit trail.</span>${compact ? '<a class="link" href="ai-control-security.html#matrix">All ' + MATRIX.reduce((a, g) => a + g[1].length, 0) + ' controls ' + I('arrow-right') + '</a>' : ''}</div>`;
     const count = () => ['auto', 'review', 'manual'].forEach(v => $(`[data-c="${v}"]`, el).textContent = $$(`.seg button[data-v="${v}"][aria-checked="true"]`, el).length);
     $$('.seg', el).forEach(seg => seg.addEventListener('click', e => {
@@ -551,7 +543,7 @@
 
   /* --------------------------------------------------------------- Forms */
   function demoForm(form) {
-    const succ = $('[data-success]'), steps = $$('[data-step]', form);
+    const succ = $('[data-success]');
     form.addEventListener('submit', e => {
       e.preventDefault();
       let ok = true;
