@@ -8,12 +8,14 @@ Portal: `https://webdeployment.highvolt.tech`
 
 Quantum Ledgerline and all other HighVolt production websites are **read-only** for this workstream.
 
-- Use a **separate** Hostinger document root for `quantumvisamanager.com` only.
-- Use **separate** GitHub Environments (`Hostinger-ReadOnly`, `Production`) on **this** repository.
-- Use **separate** SSH credentials, known_hosts, backup directory (`~/deployment_backups/qvm-production`), and cutover gate (`QVM_PRODUCTION_CUTOVER_ENABLED`).
-- Do **not** modify Ledgerline workflows, secrets, DNS, Vercel, or production files.
-- Do **not** reuse Ledgerline’s private key or document root path.
-- If a change could affect any existing production website, **stop and request approval**.
+- Verified QVM root: `/home/u359614291/domains/quantumvisamanager.com/public_html`
+- Forbidden Ledgerline root: `/home/u359614291/domains/quantumledgerline.com/public_html`
+- Same Hostinger account may host both sites; workflows **pin and reject** non-QVM paths.
+- Dedicated SSH key: `qvm-hostinger-production` (do not reuse Ledgerline’s private key).
+- Separate GitHub Environments (`Hostinger-ReadOnly`, `Production`) on **this** repository.
+- Separate backup directory: `$HOME/deployment_backups/qvm-production`.
+- Cutover gate: `QVM_PRODUCTION_CUTOVER_ENABLED` (keep `false` until first approved deploy).
+- See `docs/github-production-checklist.md` for the exact secret/variable table.
 
 Production cutover remains **disabled** until `QVM_PRODUCTION_CUTOVER_ENABLED=true` is set after Hostinger + DNS + secrets are approved.
 

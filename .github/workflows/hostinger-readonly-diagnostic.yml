@@ -1,21 +1,18 @@
 name: Read-only Hostinger path diagnostic (QVM)
 
 # Safe discovery only. Does not write, delete, or deploy.
-# Requires site-specific Hostinger-ReadOnly environment secrets after the Hostinger website exists.
-# Do NOT reuse Ledgerline SSH keys or document roots.
+# Uses dedicated QVM SSH key from environment Hostinger-ReadOnly.
+# Verified endpoint: 92.113.28.62:65002 as u359614291
+# Verified QVM root: /home/u359614291/domains/quantumvisamanager.com/public_html
+# Explicitly rejects Ledgerline root.
 
 on:
   workflow_dispatch:
     inputs:
       expected_host_key_fingerprint:
-        description: SHA256 fingerprint verified in Hostinger before dispatch (format SHA256:...)
+        description: SHA256 fingerprint verified before dispatch (format SHA256:...)
         required: true
         type: string
-      expected_domain:
-        description: Apex domain that should own the document root
-        required: true
-        type: string
-        default: quantumvisamanager.com
 
 permissions:
   contents: read
@@ -26,29 +23,32 @@ concurrency:
 
 jobs:
   discover:
-    name: Read-only SSH discovery
+    name: Read-only SSH discovery (QVM root only)
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: Hostinger-ReadOnly
     steps:
-      - name: Validate approved connection details (no secret values printed)
+      - name: Validate approved QVM connection details (no secret values printed)
         env:
           HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
           HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
           HOSTINGER_USERNAME: ${{ secrets.HOSTINGER_USERNAME }}
           HOSTINGER_SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
           EXPECTED_HOST_KEY_FINGERPRINT: ${{ inputs.expected_host_key_fingerprint }}
-          EXPECTED_DOMAIN: ${{ inputs.expected_domain }}
         run: |
           set -euo pipefail
+          readonly EXPECTED_HOST='92.113.28.62'
+          readonly EXPECTED_PORT='65002'
+          readonly EXPECTED_USER='u359614291'
           for name in HOSTINGER_HOST HOSTINGER_PORT HOSTINGER_USERNAME HOSTINGER_SSH_KEY; do
             [[ -n "${!name:-}" ]] || { echo "Missing Hostinger-ReadOnly secret: $name"; exit 1; }
           done
-          [[ "$HOSTINGER_PORT" =~ ^[0-9]{1,5}$ ]]
+          [[ "$HOSTINGER_HOST" == "$EXPECTED_HOST" ]]
+          [[ "$HOSTINGER_PORT" == "$EXPECTED_PORT" ]]
+          [[ "$HOSTINGER_USERNAME" == "$EXPECTED_USER" ]]
           [[ "$EXPECTED_HOST_KEY_FINGERPRINT" =~ ^SHA256:[A-Za-z0-9+/=]+$ ]]
-          [[ "$EXPECTED_DOMAIN" == 'quantumvisamanager.com' ]]
-          echo "Approved endpoint details and SSH key are present. Secret values are not printed."
+          echo "Approved QVM endpoint details and dedicated SSH key are present. Secret values are not printed."
 
       - name: Pin the Hostinger SSH host key (strict verification)
         env:
@@ -71,19 +71,18 @@ jobs:
             fi
           done < "$RUNNER_TEMP/scanned-host-keys"
           if [[ "$matched" != 1 ]]; then
-            echo "No scanned host key matched the fingerprint supplied from Hostinger. No SSH connection was made."
+            echo "No scanned host key matched the fingerprint supplied. No SSH connection was made."
             exit 1
           fi
           chmod 600 "$RUNNER_TEMP/hostinger_known_hosts"
-          echo "Host key matched the supplied Hostinger fingerprint."
+          echo "Host key matched the supplied fingerprint."
 
-      - name: Discover candidate document roots (read-only)
+      - name: Verify QVM document root and reject Ledgerline (read-only)
         env:
           HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
           HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
           HOSTINGER_USERNAME: ${{ secrets.HOSTINGER_USERNAME }}
           HOSTINGER_SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
-          EXPECTED_DOMAIN: ${{ inputs.expected_domain }}
         run: |
           set -euo pipefail
           key_file="$RUNNER_TEMP/hostinger_key"
@@ -91,40 +90,32 @@ jobs:
           printf '%s\n' "$HOSTINGER_SSH_KEY" > "$key_file"
           chmod 600 "$key_file"
           SSH_OPTS=(-o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/hostinger_known_hosts" -o ConnectTimeout=15 -i "$key_file" -p "$HOSTINGER_PORT")
-          printf -v DOMAIN_Q '%q' "$EXPECTED_DOMAIN"
-          ssh "${SSH_OPTS[@]}" "$HOSTINGER_USERNAME@$HOSTINGER_HOST" "EXPECTED_DOMAIN=$DOMAIN_Q bash -s" <<'REMOTE_READ_ONLY'
+          ssh "${SSH_OPTS[@]}" "$HOSTINGER_USERNAME@$HOSTINGER_HOST" 'bash -s' <<'REMOTE_READ_ONLY'
           set -euo pipefail
+          expected_target='/home/u359614291/domains/quantumvisamanager.com/public_html'
+          forbidden_ledgerline='/home/u359614291/domains/quantumledgerline.com/public_html'
           resolved_home="$(readlink -f -- "$HOME")"
-          candidates=(
-            "$resolved_home/domains/${EXPECTED_DOMAIN}/public_html"
-            "$resolved_home/public_html"
-          )
-          echo "resolved_home_ok=yes"
-          echo "expected_domain=${EXPECTED_DOMAIN}"
-          found=0
-          for candidate in "${candidates[@]}"; do
-            [[ -d "$candidate" ]] || { echo "candidate_missing=$(basename "$(dirname "$candidate")")/$(basename "$candidate")"; continue; }
-            resolved="$(readlink -f -- "$candidate")"
-            case "$resolved" in
-              "$resolved_home"/*) ;;
-              *) echo "candidate_rejected_outside_home"; continue ;;
-            esac
-            perms="$(stat -c '%a' -- "$resolved")"
-            readable=no; writable=no
-            [[ -r "$resolved" ]] && readable=yes
-            [[ -w "$resolved" ]] && writable=yes
-            # Count entries without listing names of unrelated sites
-            entry_count="$(find "$resolved" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')"
-            echo "candidate_layout_ok=yes"
-            echo "candidate_permissions=${perms}"
-            echo "candidate_readable=${readable}"
-            echo "candidate_writable=${writable}"
-            echo "candidate_entry_count=${entry_count}"
-            found=$((found + 1))
-          done
-          echo "candidate_match_count=${found}"
-          if [[ "$found" -lt 1 ]]; then
-            echo "No candidate document root found under the expected domain. Create the Hostinger website first."
-            exit 1
-          fi
+          target="$(realpath -e -- "$expected_target")"
+          forbidden="$(realpath -e -- "$forbidden_ledgerline")"
+          test "$target" = "$expected_target"
+          test "$target" = "$resolved_home/domains/quantumvisamanager.com/public_html"
+          test "$target" != "$forbidden"
+          case "$target" in
+            *quantumledgerline.com*|*quantumledgerlink.com*) exit 1 ;;
+          esac
+          test -d "$target"
+          test -r "$target"
+          test -w "$target"
+          # Empty/new site may contain only Hostinger default.php
+          entry_count="$(find "$target" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')"
+          perms="$(stat -c '%a' -- "$target")"
+          has_default=no
+          [[ -f "$target/default.php" ]] && has_default=yes
+          echo "qvm_target_ok=yes"
+          echo "qvm_target_permissions=${perms}"
+          echo "qvm_target_writable=yes"
+          echo "qvm_entry_count=${entry_count}"
+          echo "qvm_has_default_php=${has_default}"
+          echo "ledgerline_root_rejected=yes"
+          echo "backup_dir_expected=\$HOME/deployment_backups/qvm-production"
           REMOTE_READ_ONLY

@@ -174,7 +174,7 @@ jobs:
           echo "$EXPECTED_SHA256  qvm-release.tar.gz" | sha256sum --check --status
           grep -Fx "$EXPECTED_SHA256  qvm-release.tar.gz" qvm-release.tar.gz.sha256
 
-      - name: Validate production configuration
+      - name: Validate production configuration (QVM root only)
         env:
           HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
           HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
@@ -186,20 +186,35 @@ jobs:
           HOSTINGER_PUBLIC_URL: ${{ vars.HOSTINGER_PUBLIC_URL }}
         run: |
           set -euo pipefail
+          # Verified Hostinger endpoint + QVM document root (do not accept Ledgerline or other sites).
+          readonly EXPECTED_HOST='92.113.28.62'
+          readonly EXPECTED_PORT='65002'
+          readonly EXPECTED_USER='u359614291'
+          readonly EXPECTED_TARGET='/home/u359614291/domains/quantumvisamanager.com/public_html'
+          readonly EXPECTED_SUFFIX='/domains/quantumvisamanager.com/public_html'
+          readonly FORBIDDEN_LEDGERLINE='/home/u359614291/domains/quantumledgerline.com/public_html'
+
           for name in HOSTINGER_HOST HOSTINGER_PORT HOSTINGER_USERNAME HOSTINGER_SSH_KEY HOSTINGER_KNOWN_HOSTS HOSTINGER_TARGET_PATH HOSTINGER_TARGET_SUFFIX HOSTINGER_PUBLIC_URL; do
             [[ -n "${!name:-}" ]] || { echo "Missing required production setting: $name"; exit 1; }
           done
-          [[ "$HOSTINGER_PORT" =~ ^[0-9]{1,5}$ ]] && (( HOSTINGER_PORT >= 1 && HOSTINGER_PORT <= 65535 ))
-          [[ "$HOSTINGER_TARGET_PATH" == /* && "$HOSTINGER_TARGET_PATH" != *'..'* ]]
-          [[ "$HOSTINGER_TARGET_SUFFIX" == '/domains/quantumvisamanager.com/public_html' || "$HOSTINGER_TARGET_SUFFIX" == '/public_html' ]]
+          [[ "$HOSTINGER_HOST" == "$EXPECTED_HOST" ]]
+          [[ "$HOSTINGER_PORT" == "$EXPECTED_PORT" ]]
+          [[ "$HOSTINGER_USERNAME" == "$EXPECTED_USER" ]]
+          [[ "$HOSTINGER_TARGET_PATH" == "$EXPECTED_TARGET" ]]
+          [[ "$HOSTINGER_TARGET_SUFFIX" == "$EXPECTED_SUFFIX" ]]
           [[ "$HOSTINGER_PUBLIC_URL" == 'https://quantumvisamanager.com' ]]
-          [[ "$HOSTINGER_TARGET_PATH" == *'quantumvisamanager.com'* || "$HOSTINGER_TARGET_SUFFIX" == '/public_html' ]]
+          [[ "$HOSTINGER_TARGET_PATH" != "$FORBIDDEN_LEDGERLINE" ]]
+          [[ "$HOSTINGER_TARGET_PATH" != *'..'* ]]
+          [[ "$HOSTINGER_TARGET_PATH" != *'quantumledgerline.com'* ]]
+          [[ "$HOSTINGER_TARGET_PATH" != *'quantumledgerlink.com'* ]]
+          [[ "$HOSTINGER_TARGET_PATH" == *'quantumvisamanager.com'* ]]
+          [[ -n "$HOSTINGER_KNOWN_HOSTS" ]]
           mkdir -p ~/.ssh
           printf '%s\n' "$HOSTINGER_SSH_KEY" > ~/.ssh/hostinger_key
           printf '%s\n' "$HOSTINGER_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/hostinger_key
+          chmod 600 ~/.ssh/hostinger_key ~/.ssh/known_hosts
 
-      - name: Verify exact canonical target and SSH host
+      - name: Verify exact canonical QVM target over strict SSH
         env:
           HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
           HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
@@ -208,11 +223,16 @@ jobs:
           HOSTINGER_TARGET_SUFFIX: ${{ vars.HOSTINGER_TARGET_SUFFIX }}
         run: |
           set -euo pipefail
+          readonly EXPECTED_TARGET='/home/u359614291/domains/quantumvisamanager.com/public_html'
+          readonly FORBIDDEN_LEDGERLINE='/home/u359614291/domains/quantumledgerline.com/public_html'
+          [[ "$HOSTINGER_TARGET_PATH" == "$EXPECTED_TARGET" ]]
           ssh_opts=(-o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30 -i ~/.ssh/hostinger_key -p "$HOSTINGER_PORT")
           printf -v target_q '%q' "$HOSTINGER_TARGET_PATH"
           printf -v suffix_q '%q' "$HOSTINGER_TARGET_SUFFIX"
+          printf -v expected_q '%q' "$EXPECTED_TARGET"
+          printf -v forbidden_q '%q' "$FORBIDDEN_LEDGERLINE"
           ssh "${ssh_opts[@]}" "$HOSTINGER_USERNAME@$HOSTINGER_HOST" \
-            "set -euo pipefail; target=\$(realpath -e -- $target_q); home=\$(realpath -e -- \"\$HOME\"); suffix=$suffix_q; test -d \"\$target\"; test \"\$target\" = \"\$home\$suffix\"; test \"\$target\" != /; test \"\$target\" != \"\$home\"; test -r \"\$target\" -a -w \"\$target\"; printf '%s\\n' TARGET_OK"
+            "set -euo pipefail; target=\$(realpath -e -- $target_q); home=\$(realpath -e -- \"\$HOME\"); suffix=$suffix_q; forbidden=\$(realpath -e -- $forbidden_q); test -d \"\$target\"; test \"\$target\" = \"\$home\$suffix\"; test \"\$target\" = $expected_q; test \"\$target\" != /; test \"\$target\" != \"\$home\"; test \"\$target\" != \"\$forbidden\"; case \"\$target\" in *quantumledgerline.com*|*quantumledgerlink.com*) exit 1 ;; esac; test -r \"\$target\" -a -w \"\$target\"; printf '%s\\n' TARGET_OK"
 
       - name: Capture and verify pre-deployment production backup
         id: snapshot
@@ -258,6 +278,9 @@ jobs:
           RELEASE_COMMIT: ${{ needs.build.outputs.release_commit }}
         run: |
           set -euo pipefail
+          readonly EXPECTED_TARGET='/home/u359614291/domains/quantumvisamanager.com/public_html'
+          [[ "$HOSTINGER_TARGET_PATH" == "$EXPECTED_TARGET" ]]
+          [[ "$HOSTINGER_PUBLIC_URL" == 'https://quantumvisamanager.com' ]]
           ssh_opts=(-o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30 -i ~/.ssh/hostinger_key -p "$HOSTINGER_PORT")
           printf -v target_q '%q' "$HOSTINGER_TARGET_PATH"
           printf -v commit_q '%q' "$RELEASE_COMMIT"
@@ -296,12 +319,16 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$BACKUP_NAME" =~ ^backup-[0-9]{8}-[0-9]{6}-[0-9]+-[a-f0-9]{40}\.tar\.gz$ ]]
+          readonly EXPECTED_TARGET='/home/u359614291/domains/quantumvisamanager.com/public_html'
+          [[ "$HOSTINGER_TARGET_PATH" == "$EXPECTED_TARGET" ]]
+          [[ "$HOSTINGER_TARGET_PATH" != *'quantumledgerline.com'* ]]
           ssh_opts=(-o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30 -i ~/.ssh/hostinger_key -p "$HOSTINGER_PORT")
           printf -v target_q '%q' "$HOSTINGER_TARGET_PATH"
           printf -v suffix_q '%q' "$HOSTINGER_TARGET_SUFFIX"
           printf -v backup_q '%q' "$BACKUP_NAME"
+          printf -v expected_q '%q' "$EXPECTED_TARGET"
           ssh "${ssh_opts[@]}" "$HOSTINGER_USERNAME@$HOSTINGER_HOST" \
-            "set -euo pipefail; target=\$(realpath -e -- $target_q); home=\$(realpath -e -- \"\$HOME\"); suffix=$suffix_q; archive=\"\$HOME/deployment_backups/qvm-production/$backup_q\"; test \"\$target\" = \"\$home\$suffix\"; test \"\$target\" != /; test \"\$target\" != \"\$home\"; test -f \"\$archive\"; tar -tzf \"\$archive\" >/dev/null; tar -tvzf \"\$archive\" | awk '\$1 !~ /^[-d]/ {bad=1} END {exit bad}'; find \"\$target\" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +; tar -xzf \"\$archive\" -C \"\$target\" --no-same-owner --no-same-permissions; test -s \"\$target/index.html\""
+            "set -euo pipefail; target=\$(realpath -e -- $target_q); home=\$(realpath -e -- \"\$HOME\"); suffix=$suffix_q; archive=\"\$HOME/deployment_backups/qvm-production/$backup_q\"; test \"\$target\" = \"\$home\$suffix\"; test \"\$target\" = $expected_q; test \"\$target\" != /; test \"\$target\" != \"\$home\"; case \"\$target\" in *quantumledgerline.com*|*quantumledgerlink.com*) exit 1 ;; esac; test -f \"\$archive\"; tar -tzf \"\$archive\" >/dev/null; tar -tvzf \"\$archive\" | awk '\$1 !~ /^[-d]/ {bad=1} END {exit bad}'; find \"\$target\" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +; tar -xzf \"\$archive\" -C \"\$target\" --no-same-owner --no-same-permissions; test -s \"\$target/index.html\" -o -s \"\$target/default.php\""
           curl --fail --show-error --silent --retry 3 --retry-delay 5 "$HOSTINGER_PUBLIC_URL/" -o /dev/null || true
 
   notify:
