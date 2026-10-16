@@ -109,3 +109,16 @@ Graph notify (set only after Entra FIC approval; see `docs/microsoft-graph-notif
 | `MAIL_TO` | Production secret | `alerts@highvolt.tech` |
 | `GRAPH_NOTIFY_ENABLED` | Repository variable | keep `false` until smoke test approved |
 
+## Automatic deploy path allowlist
+
+deploy.yml push triggers only when these website build inputs change on main:
+
+- src/**
+- public/**
+- index.html
+- package.json
+- package-lock.json
+- ite.config.js
+
+Docs, tests, notification scripts, workflows, and legacy root HTML/assets do **not** auto-deploy. Manual workflow_dispatch remains available and is still gated by QVM_PRODUCTION_CUTOVER_ENABLED.
+

@@ -8,10 +8,14 @@ run-name: Deploy Quantum Visa Manager by ${{ inputs.deployer_email || github.act
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - '.github/workflows/**'
-      - 'docs/**'
-      - '**.md'
+    # Website production build inputs only. Docs/tests/scripts/workflows do not auto-deploy.
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
   workflow_dispatch:
     inputs:
       release_commit:
