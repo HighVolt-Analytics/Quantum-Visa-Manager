@@ -160,6 +160,9 @@ jobs:
       ((github.event_name == 'push') ||
        (github.event_name == 'workflow_dispatch' &&
         inputs.confirm_production == 'DEPLOY'))
+    outputs:
+      public_marker_status: ${{ steps.public_health.outputs.public_marker_status }}
+      rollback_result: ${{ steps.rollback.outputs.result }}
     steps:
       - name: Download immutable release artifact
         uses: actions/download-artifact@v4
@@ -269,6 +272,7 @@ jobs:
             "tar -xf - -C $target_q --no-same-owner --no-same-permissions"
 
       - name: Verify deployed marker, routes, and static assets
+        id: public_health
         env:
           HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
           HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
@@ -305,8 +309,10 @@ jobs:
             headers="$(curl --fail --show-error --silent --retry 3 --retry-delay 5 -D - -o /dev/null "$HOSTINGER_PUBLIC_URL$asset")"
             printf '%s\n' "$headers" | tr -d '\r' | grep -qiE '^content-type:.*(javascript|css|image|font|svg|webp|text)'
           done
+          echo "public_marker_status=matched" >> "$GITHUB_OUTPUT"
 
       - name: Restore pre-deployment snapshot after a release failure
+        id: rollback
         if: failure() && steps.snapshot.outcome == 'success'
         env:
           HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
@@ -330,6 +336,7 @@ jobs:
           ssh "${ssh_opts[@]}" "$HOSTINGER_USERNAME@$HOSTINGER_HOST" \
             "set -euo pipefail; target=\$(realpath -e -- $target_q); home=\$(realpath -e -- \"\$HOME\"); suffix=$suffix_q; archive=\"\$HOME/deployment_backups/qvm-production/$backup_q\"; test \"\$target\" = \"\$home\$suffix\"; test \"\$target\" = $expected_q; test \"\$target\" != /; test \"\$target\" != \"\$home\"; case \"\$target\" in *quantumledgerline.com*|*quantumledgerlink.com*) exit 1 ;; esac; test -f \"\$archive\"; tar -tzf \"\$archive\" >/dev/null; tar -tvzf \"\$archive\" | awk '\$1 !~ /^[-d]/ {bad=1} END {exit bad}'; find \"\$target\" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +; tar -xzf \"\$archive\" -C \"\$target\" --no-same-owner --no-same-permissions; test -s \"\$target/index.html\" -o -s \"\$target/default.php\""
           curl --fail --show-error --silent --retry 3 --retry-delay 5 "$HOSTINGER_PUBLIC_URL/" -o /dev/null || true
+          echo "result=verified" >> "$GITHUB_OUTPUT"
 
   notify:
     name: Email deployment result via Microsoft Graph
@@ -340,71 +347,41 @@ jobs:
       vars.GRAPH_NOTIFY_ENABLED == 'true' &&
       (needs.deploy.result == 'success' || needs.deploy.result == 'failure')
     runs-on: ubuntu-latest
+    environment: Production
     permissions:
       contents: read
+      actions: read
       id-token: write
     steps:
-      - name: Azure login (OIDC)
-        uses: azure/login@v2
+      - name: Check out notification helper
+        uses: actions/checkout@v4
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          allow-no-subscriptions: true
+          ref: ${{ github.sha }}
+          persist-credentials: false
 
-      - name: Send Graph mail (success or failure)
+      - name: Send one final-outcome email
+        id: mail
+        continue-on-error: true
         env:
-          RESULT: ${{ needs.deploy.result }}
+          GH_TOKEN: ${{ github.token }}
+          MAIL_TENANT_ID: ${{ vars.MAIL_TENANT_ID }}
+          MAIL_CLIENT_ID: ${{ vars.MAIL_CLIENT_ID }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          PUBLIC_MARKER_STATUS: ${{ needs.deploy.outputs.public_marker_status }}
           RELEASE_COMMIT: ${{ needs.build.outputs.release_commit }}
+          DEPLOY_EVENT: ${{ github.event_name }}
+          ROLLBACK_RESULT: ${{ needs.deploy.outputs.rollback_result }}
           DEPLOYER_EMAIL: ${{ inputs.deployer_email || 'unknown' }}
           DEPLOYER_NAME: ${{ inputs.deployer_name || 'unknown' }}
           TRIGGERED_FROM: ${{ inputs.triggered_from || 'GitHub' }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          GRAPH_SENDER: ${{ vars.GRAPH_SENDER_EMAIL || 'support@highvolt.tech' }}
-          GRAPH_RECIPIENT: ${{ vars.GRAPH_ALERT_EMAIL || 'alerts@highvolt.tech' }}
+        run: python3 scripts/send-deployment-notification.py
+
+      - name: Record notification delivery result
+        if: always()
+        env:
+          MAIL_OUTCOME: ${{ steps.mail.outcome }}
         run: |
-          set -euo pipefail
-          token="$(az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv)"
-          [[ -n "$token" ]]
-          if [[ "$RESULT" == 'success' ]]; then
-            subject="SUCCESS: Quantum Visa Manager production deploy"
-            status_line="Deployment succeeded."
-          else
-            subject="FAILURE: Quantum Visa Manager production deploy"
-            status_line="Deployment failed. Check the Actions run and Hostinger backup state."
-          fi
-          body=$(printf '%s\n' \
-            "$status_line" \
-            "" \
-            "Website: Quantum Visa Manager" \
-            "Domain: https://quantumvisamanager.com" \
-            "Commit: $RELEASE_COMMIT" \
-            "Deployer: $DEPLOYER_NAME <$DEPLOYER_EMAIL>" \
-            "Triggered from: $TRIGGERED_FROM" \
-            "Run: $RUN_URL")
-          # Escape for JSON
-          body_json=$(python3 -c 'import json,os; print(json.dumps(os.environ["BODY"]))' BODY="$body")
-          subject_json=$(python3 -c 'import json,os; print(json.dumps(os.environ["SUBJECT"]))' SUBJECT="$subject")
-          payload=$(cat <<EOF
-          {
-            "message": {
-              "subject": ${subject_json},
-              "body": { "contentType": "Text", "content": ${body_json} },
-              "toRecipients": [
-                { "emailAddress": { "address": "${GRAPH_RECIPIENT}" } }
-              ]
-            },
-            "saveToSentItems": false
-          }
-          EOF
-          )
-          http_code=$(curl --silent --show-error --output /tmp/graph-mail-response.json --write-out '%{http_code}' \
-            -X POST "https://graph.microsoft.com/v1.0/users/${GRAPH_SENDER}/sendMail" \
-            -H "Authorization: Bearer ${token}" \
-            -H "Content-Type: application/json" \
-            --data "$payload")
-          if [[ "$http_code" != "202" && "$http_code" != "200" ]]; then
-            echo "Graph sendMail returned HTTP $http_code (details redacted)."
-            exit 1
-          fi
-          echo "Notification accepted by Microsoft Graph."
-        continue-on-error: true
+          echo "Email notification step outcome: $MAIL_OUTCOME" >> "$GITHUB_STEP_SUMMARY"

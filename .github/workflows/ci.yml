@@ -40,6 +40,12 @@ jobs:
       - name: Production build
         run: npm run build
 
+      - name: Validate Graph notification helpers (mocked)
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/send_mail_graph.py scripts/send-deployment-notification.py scripts/send-notification-smoke.py
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+
       - name: Verify Vite output and SPA assets
         run: |
           set -euo pipefail

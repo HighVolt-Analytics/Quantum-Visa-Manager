@@ -53,8 +53,6 @@ Optional later (Graph notify — leave unset until OIDC is ready):
 
 | Secret name | Purpose |
 |-------------|---------|
-| `AZURE_CLIENT_ID` | Entra app for GitHub OIDC → Graph |
-| `AZURE_TENANT_ID` | Entra tenant ID |
 
 ---
 
@@ -100,3 +98,14 @@ ssh-keygen -lf hostinger_scanned.txt -E sha256
 5. Only after diagnostic succeeds: create **Production** environment and set section C + D (`QVM_PRODUCTION_CUTOVER_ENABLED=false`).
 
 Do **not** enable cutover, merge without review, change DNS, or deploy yet.
+
+Graph notify (set only after Entra FIC approval; see `docs/microsoft-graph-notifications.md`):
+
+| Name | Scope | Value |
+|------|-------|-------|
+| `MAIL_TENANT_ID` | Production variable | `54904ca2-e5a0-481c-a10a-73242e6476ea` |
+| `MAIL_CLIENT_ID` | Production variable | `df08aa1f-1ac0-4fd4-964e-aac37fc57bfc` |
+| `MAIL_FROM` | Production secret | `support@highvolt.tech` |
+| `MAIL_TO` | Production secret | `alerts@highvolt.tech` |
+| `GRAPH_NOTIFY_ENABLED` | Repository variable | keep `false` until smoke test approved |
+
