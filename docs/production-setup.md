@@ -102,22 +102,16 @@ After DNS propagates, enable HTTPS in Hostinger and verify:
 
 ## 4. Microsoft Graph notifications (site-specific)
 
-Ledgerline’s current `deploy.yml` in-repo does **not** contain a Graph notify job (as of prep). QVM includes an optional Graph job gated by `GRAPH_NOTIFY_ENABLED`.
+Authoritative checklist: [`docs/microsoft-graph-notifications.md`](./microsoft-graph-notifications.md).
 
-### Preferred secure design
+QVM aligns with the verified Ledgerline Graph OIDC helpers (`MAIL_*` + federated credential), not mailbox passwords.
 
-1. Create or reuse a narrowly scoped Entra application for GitHub Actions → Graph `sendMail` as `support@highvolt.tech`.
-2. Add a **federated credential** for:
-   - Issuer: `https://token.actions.githubusercontent.com`
-   - Subject: `repo:HighVolt-Analytics/Quantum-Visa-Manager:environment:Production`  
-     (or `ref:refs/heads/main` if environment binding is not used)
-3. Grant **Application** permission `Mail.Send` **only if** org policy requires app-only mail; prefer **delegated** / limited mailbox access for `support@highvolt.tech` per your tenant design. Do **not** grant unrestricted tenant-wide mail without approval.
-4. Set `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` on the Production environment.
-5. Smoke-test with `GRAPH_NOTIFY_ENABLED=true` on a failed/success dry run after cutover, then leave enabled.
+Until Entra FIC + Production `MAIL_*` are approved and the notification-only smoke test succeeds, keep:
 
-Do not store mailbox passwords in GitHub secrets.
+- `GRAPH_NOTIFY_ENABLED=false`
+- no `AZURE_*` Graph secrets
 
----
+Preferred identity decision: **extend** existing app `df08aa1f-1ac0-4fd4-964e-aac37fc57bfc` with one QVM Production immutable OIDC federated credential. Preserve Exchange sender restriction to `support@highvolt.tech`; recipient `alerts@highvolt.tech`.
 
 ## 5. Branch protection (recommended before cutover)
 
