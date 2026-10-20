@@ -10,6 +10,8 @@ export const STATES = Object.freeze({
   COMPLETE: 'COMPLETE',
   NEEDS_ATTENTION: 'NEEDS_ATTENTION',
   RELEASED: 'RELEASED',
+  // Cancellation confirmed; slot, email lock and private note are being cleaned up.
+  CANCELLING: 'CANCELLING',
   CANCELLED: 'CANCELLED',
   ARCHIVED: 'ARCHIVED',
 })
