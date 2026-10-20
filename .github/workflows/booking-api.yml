@@ -1,0 +1,122 @@
+name: Booking API
+
+# Book a Demo backend (Azure Functions, func-qvm-bookdemo-prod-aue).
+# Independent of the Hostinger website pipeline: deploy.yml does not watch booking-api/**.
+# Deployment never changes app settings, so BOOKING_ENABLED is left as configured in Azure.
+
+on:
+  pull_request:
+    paths:
+      - 'booking-api/**'
+      - '.github/workflows/booking-api.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'booking-api/**'
+      - '.github/workflows/booking-api.yml'
+  workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: Type DEPLOY to publish the booking API code to Azure (does not enable booking)
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: booking-api-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Booking API tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: booking-api
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: booking-api/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Validate JavaScript and function registrations
+        run: npm run check
+
+      - name: Unit and mocked-Graph integration tests
+        run: npm test
+
+      - name: Azure Table Storage concurrency tests (Azurite)
+        run: npm run test:integration
+
+  deploy:
+    name: Deploy booking API to Azure
+    needs: [test]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm_deploy == 'DEPLOY'
+    runs-on: ubuntu-latest
+    environment: BookDemo-Production
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: booking-api-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install production dependencies
+        working-directory: booking-api
+        run: npm ci --omit=dev
+
+      - name: Package release
+        working-directory: booking-api
+        run: |
+          set -euo pipefail
+          zip -qr ../booking-api.zip host.json package.json package-lock.json src node_modules
+          sha256sum ../booking-api.zip
+
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Flex Consumption
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.BOOKING_FUNCTION_APP }}
+          package: booking-api.zip
+          sku: flexconsumption
+          remote-build: false
+
+      - name: Report booking state (read-only)
+        env:
+          APP: ${{ vars.BOOKING_FUNCTION_APP }}
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o /dev/null -w '%{http_code}' "https://${APP}.azurewebsites.net/api/availability")
+          echo "GET /api/availability returned ${code} (503 means booking is still disabled)" >> "$GITHUB_STEP_SUMMARY"

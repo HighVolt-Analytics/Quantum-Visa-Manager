@@ -1,0 +1,29 @@
+{
+  "name": "qvm-booking-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Book a Demo backend for Quantum Visa Manager (Azure Functions, Flex Consumption)",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "check": "node scripts/check-syntax.mjs",
+    "test": "node --test \"test/unit/**/*.test.js\"",
+    "test:integration": "node --test --test-concurrency=1 \"test/integration/**/*.test.js\""
+  },
+  "dependencies": {
+    "@azure/data-tables": "^13.3.2",
+    "@azure/functions": "^4.16.5",
+    "@azure/identity": "^4.14.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "azurite": "^3.37.0",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0",
+    "yaml": "^2.9.1"
+  }
+}
