@@ -24,9 +24,7 @@ export default function Footer() {
           <div className="f-brand">
             <Link className="brand" to="/">
               <Logo />
-              <span>
-                Quantum <span className="brand-sub">Visa Manager</span>
-              </span>
+              <span className="brand-name">Quantum Visa Manager</span>
             </Link>
             <p>
               Software that completes the administrative work behind every visa matter — while
