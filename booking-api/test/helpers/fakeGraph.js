@@ -15,6 +15,13 @@ function respond(status, body, headers = {}) {
   })
 }
 
+export const NON_CALENDAR_FOLDER = {
+  error: {
+    code: 'ErrorInvalidRequest',
+    message: "Your request can't be completed. This operation does not support binding to a non-calendar folder.",
+  },
+}
+
 function timeoutError() {
   const err = new Error('The operation timed out')
   err.name = 'TimeoutError'
@@ -27,7 +34,7 @@ function timeoutError() {
  * `faults` is a queue of { when(req), status?, body?, headers?, timeout?, applyThenTimeout? }.
  */
 export function createFakeGraph() {
-  const state = { events: new Map(), byTransaction: new Map(), busy: new Set(), faults: [], calls: [], nextId: 1, teams: true }
+  const state = { events: new Map(), deletedItems: new Map(), byTransaction: new Map(), busy: new Set(), faults: [], calls: [], nextId: 1, teams: true }
 
   function availability(startMs, endMs) {
     let view = ''
@@ -85,9 +92,25 @@ export function createFakeGraph() {
       return respond(200, { value: matches })
     }
 
+    if (req.method === 'GET' && path === '/calendar/calendarView') {
+      const q = new URLSearchParams(req.search)
+      const start = Date.parse(q.get('startDateTime'))
+      const end = Date.parse(q.get('endDateTime'))
+      const propId = /id eq '([^']+)'/.exec(q.get('$expand') || '')?.[1]
+      const value = [...state.events.values()]
+        .filter((e) => e.startMs < end && e.endMs > start)
+        .map((e) => ({
+          id: e.id,
+          isCancelled: e.isCancelled,
+          singleValueExtendedProperties: (e.singleValueExtendedProperties || []).filter((p) => p.id === propId),
+        }))
+      return respond(200, { value })
+    }
+
     const one = /^\/events\/([^/?]+)$/.exec(path)
     if (one) {
       const id = decodeURIComponent(one[1])
+      if (state.deletedItems.has(id)) return respond(400, NON_CALENDAR_FOLDER)
       const event = state.events.get(id)
       if (req.method === 'GET') return event ? respond(200, event) : respond(404, { error: { code: 'ErrorItemNotFound' } })
       if (req.method === 'DELETE') {
@@ -125,6 +148,11 @@ export function createFakeGraph() {
   const notes = () => [...state.events.values()].filter((e) => e.sensitivity === 'private')
   const isCreate = (req) => req.method === 'POST' && req.path.endsWith('/events')
   const isCustomerCreate = (req) => isCreate(req) && req.body?.attendees?.length > 0
+  // What Outlook does when the organizer cancels a meeting: it moves to Deleted Items.
+  const organizerCancel = (id) => {
+    state.deletedItems.set(id, state.events.get(id))
+    state.events.delete(id)
+  }
 
-  return { fetchImpl, state, customerEvents, notes, isCreate, isCustomerCreate }
+  return { fetchImpl, state, customerEvents, notes, isCreate, isCustomerCreate, organizerCancel }
 }

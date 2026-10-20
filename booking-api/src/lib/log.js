@@ -1,6 +1,6 @@
 // Only these keys reach the logs. Customer names, emails, phone numbers, answers,
 // IP addresses and tokens must never be passed here.
-const SAFE_KEYS = new Set(['bookingId', 'state', 'status', 'code', 'httpStatus', 'attempt', 'count', 'reason', 'durationMs'])
+const SAFE_KEYS = new Set(['bookingId', 'state', 'status', 'code', 'httpStatus', 'attempt', 'count', 'reason', 'durationMs', 'op', 'category'])
 
 function format(event, fields) {
   const parts = [`qvm.event=${event}`]
@@ -22,4 +22,9 @@ export function createLogger(sink) {
 export function errorCode(err) {
   if (!err) return 'unknown'
   return err.code || err.name || 'error'
+}
+
+/** Log-safe fields describing a failure: operation, HTTP status, Graph code and category. */
+export function errorFields(err) {
+  return { op: err?.operation, httpStatus: err?.status || undefined, code: errorCode(err), category: err?.category }
 }

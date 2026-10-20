@@ -1,6 +1,7 @@
-import { SLOT_MINUTES } from './config.js'
+import { NOTE_PROPERTY_ID, SLOT_MINUTES } from './config.js'
+import { GraphError } from './graph.js'
 import { STATES } from './ledger.js'
-import { errorCode } from './log.js'
+import { errorFields } from './log.js'
 import { pruneRateLimits } from './rateLimit.js'
 
 const MINUTE = 60000
@@ -11,6 +12,7 @@ const TEAMS_GRACE_MS = 15 * MINUTE
 const RECHECK_MS = 30 * MINUTE
 const ARCHIVE_AFTER_MS = 24 * 60 * MINUTE
 const DELETE_AFTER_MS = 30 * 24 * 60 * MINUTE
+const MAX_CLEANUP_ATTEMPTS = 5
 
 const age = (iso, now) => now.getTime() - Date.parse(iso)
 
@@ -33,7 +35,7 @@ export class Reconciler {
       try {
         await this.reconcile(booking, now, s)
       } catch (err) {
-        this.log.error('reconcile_error', { bookingId: booking.bookingId, code: errorCode(err) })
+        this.log.error('reconcile_error', { bookingId: booking.bookingId, state: booking.state, ...errorFields(err) })
       }
     }
     for await (const request of this.ledger.requests()) {
@@ -65,6 +67,8 @@ export class Reconciler {
       case STATES.NEEDS_ATTENTION:
         if (slotEnded) return this.archive(b, s)
         return
+      case STATES.CANCELLING:
+        return this.finishCancellation(b, s)
       case STATES.RELEASED:
       case STATES.CANCELLED:
         if (age(b.updatedAt, now) > ARCHIVE_AFTER_MS) return this.archive(b, s)
@@ -99,8 +103,9 @@ export class Reconciler {
   }
 
   async resolvePendingTeams(b, now, s) {
-    const event = await this.calendar.getEvent(b.eventId)
-    if (!event || event.isCancelled) return this.cancel(b, s)
+    const check = await this.checkCancellation(b, { includeOnlineMeeting: true })
+    if (check.cancelled) return this.confirmCancellation(b, check.reason, s)
+    const { event } = check
     let current = b
     if (event.onlineMeeting?.joinUrl) {
       current = await this.ledger.updateBooking(b, {
@@ -117,9 +122,62 @@ export class Reconciler {
   async checkConfirmed(b, now, s) {
     let current = await this.deliverPendingNote(b, s)
     if (current.lastCheckedAt && age(current.lastCheckedAt, now) < RECHECK_MS) return
-    const event = await this.calendar.getEvent(current.eventId)
-    if (!event || event.isCancelled) return this.cancel(current, s)
+    const check = await this.checkCancellation(current)
+    if (check.cancelled) return this.confirmCancellation(current, check.reason, s)
     await this.ledger.updateBooking(current, { lastCheckedAt: now.toISOString() })
+  }
+
+  /**
+   * Returns { cancelled: true, reason } only when the invitation lookup reports it cancelled,
+   * deleted or moved out of the calendar AND a search of the booked slot finds no live event
+   * for this booking. Returns { event } while the invitation is live. Anything inconclusive
+   * throws, so the booking stays reserved and is checked again on the next run.
+   */
+  async checkCancellation(b, { includeOnlineMeeting = false } = {}) {
+    const lookup = await this.calendar.lookupEvent(b.eventId, { includeOnlineMeeting })
+    if (lookup.state === 'active') return { event: lookup.event }
+    const slotEnd = new Date(Date.parse(b.slotStart) + SLOT_MINUTES * MINUTE).toISOString()
+    const live = (await this.calendar.eventsInWindow(b.slotStart, slotEnd)).filter(
+      (e) => !e.isCancelled && (e.id === b.eventId || e.bookingId === b.bookingId),
+    )
+    if (live.length > 0) {
+      throw new GraphError('cancellation_contradicted', { category: 'inconclusive', operation: 'window_search' })
+    }
+    return { cancelled: true, reason: lookup.state }
+  }
+
+  async confirmCancellation(b, reason, s) {
+    const current = await this.ledger.updateBooking(b, {
+      state: STATES.CANCELLING,
+      cancelReason: reason,
+      cancelConfirmedAt: this.now().toISOString(),
+      cleanupAttempts: 0,
+    })
+    this.log.info('cancellation_confirmed', { bookingId: b.bookingId, reason })
+    return this.finishCancellation(current, s)
+  }
+
+  /** Idempotent: every step tolerates having already run, so a failed run resumes here. */
+  async finishCancellation(b, s) {
+    await this.ledger.releaseSlot(b)
+    await this.ledger.releaseEmail(b)
+    try {
+      const noteIds = b.noteEventId
+        ? [b.noteEventId]
+        : (await this.calendar.findEventsByProperty(`${b.bookingId}-note`, NOTE_PROPERTY_ID)).map((e) => e.id)
+      for (const id of noteIds) await this.calendar.deleteEvent(id)
+    } catch (err) {
+      const attempt = (b.cleanupAttempts || 0) + 1
+      await this.ledger.updateBooking(b, { cleanupAttempts: attempt })
+      if (attempt === MAX_CLEANUP_ATTEMPTS) {
+        this.log.error('needs_attention', { bookingId: b.bookingId, reason: 'note_cleanup_failed', attempt })
+        s.attention++
+      }
+      throw err
+    }
+    await this.ledger.updateBooking(b, { state: STATES.CANCELLED, answers: '', attendeeName: '', attendeeEmail: '' })
+    this.log.info('cancelled', { bookingId: b.bookingId, reason: b.cancelReason })
+    s.cancelled++
   }
 
   async deliverPendingNote(b, s) {
@@ -133,15 +191,6 @@ export class Reconciler {
     await this.ledger.updateBooking(b, { state: STATES.NEEDS_ATTENTION, lastErrorCode: reason })
     this.log.error('needs_attention', { bookingId: b.bookingId, reason })
     s.attention++
-  }
-
-  async cancel(b, s) {
-    if (b.noteEventId) await this.calendar.deleteEvent(b.noteEventId)
-    await this.ledger.releaseSlot(b)
-    await this.ledger.releaseEmail(b)
-    await this.ledger.updateBooking(b, { state: STATES.CANCELLED, answers: '' })
-    this.log.info('cancelled', { bookingId: b.bookingId })
-    s.cancelled++
   }
 
   async archive(b, s) {
