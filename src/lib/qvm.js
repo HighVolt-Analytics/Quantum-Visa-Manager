@@ -1,4 +1,6 @@
 /* Quantum Visa Manager — shared site script */
+import { setupBooking } from './bookDemo.js';
+
 (() => {
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -543,7 +545,12 @@
 
   /* --------------------------------------------------------------- Forms */
   function demoForm(form) {
+    // React StrictMode re-runs page effects on the same DOM in development.
+    if (form.dataset.qvmForm === '1') return;
+    form.dataset.qvmForm = '1';
     const succ = $('[data-success]');
+    const showUnavailable = () => { form.style.display = 'none'; succ.classList.add('is-on'); succ.focus({ preventScroll: true }); succ.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); };
+    const booking = setupBooking(form, { onUnavailable: showUnavailable, reduceMotion: reduce });
     form.addEventListener('submit', e => {
       e.preventDefault();
       let ok = true;
@@ -559,7 +566,7 @@
         if (bad) ok = false;
       });
       if (!ok) { const first = $('.has-error', form); first && first.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); return; }
-      form.style.display = 'none'; succ.classList.add('is-on'); succ.focus({ preventScroll: true }); succ.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+      if (booking) booking.onValid(); else showUnavailable();
     });
     const back = $('[data-back]', succ);
     back && back.addEventListener('click', () => { succ.classList.remove('is-on'); form.style.display = ''; $('[type="submit"]', form).focus(); });
