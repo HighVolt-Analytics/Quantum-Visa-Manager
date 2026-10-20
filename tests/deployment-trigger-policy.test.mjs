@@ -80,3 +80,11 @@ test('cutover gate and exact-commit checks remain intact', async () => {
   assert.ok(workflow.includes('StrictHostKeyChecking=yes'))
   assert.ok(workflow.includes('scripts/send-deployment-notification.py'))
 })
+
+test('pages are revalidated so returning visitors receive each release', async () => {
+  const htaccess = await readFile(new URL('../public/.htaccess', import.meta.url), 'utf8')
+  const block = htaccess.match(/<FilesMatch "\\\.html\$">([\s\S]*?)<\/FilesMatch>/)
+  assert.ok(block, 'public/.htaccess must set a cache policy for HTML pages')
+  assert.match(block[1], /Header set Cache-Control "no-cache"/)
+  assert.ok(htaccess.indexOf('<FilesMatch') < htaccess.indexOf('RewriteRule ^ index.html'), 'policy must sit before the SPA fallback')
+})
