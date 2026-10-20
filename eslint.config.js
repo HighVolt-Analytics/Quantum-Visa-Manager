@@ -11,6 +11,8 @@ export default [
       'js/**',
       '*.html',
       'index.legacy.html',
+      // Linted by its own Node.js config in the Booking API workflow.
+      'booking-api/**',
     ],
   },
   {
