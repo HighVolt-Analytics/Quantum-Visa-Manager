@@ -34,9 +34,7 @@ export default function Header({ pageKey }) {
         <div className="wrap nav">
           <Link className="brand" to="/" aria-label="Quantum Visa Manager home">
             <Logo />
-            <span>
-              Quantum <span className="brand-sub">Visa Manager</span>
-            </span>
+            <span className="brand-name">Quantum Visa Manager</span>
           </Link>
 
           <nav className="nav-links" aria-label="Primary">
@@ -80,6 +78,9 @@ export default function Header({ pageKey }) {
           </nav>
 
           <div className="nav-actions">
+            <Link className="btn btn--primary btn--sm nav-demo" to="/book-demo">
+              Book a Demo
+            </Link>
             <button
               className="icon-btn"
               type="button"
@@ -88,9 +89,6 @@ export default function Header({ pageKey }) {
             >
               {theme === 'dark' ? <Sun size={18} strokeWidth={1.75} /> : <Moon size={18} strokeWidth={1.75} />}
             </button>
-            <Link className="btn btn--primary btn--sm" to="/book-demo">
-              Book a Demo
-            </Link>
             <button
               className="icon-btn menu-toggle"
               type="button"
