@@ -8,7 +8,7 @@
 
 <section class="section--tight" style="padding-top:var(--space-8)">
   <div class="wrap split split--form" style="align-items:start">
-    <div class="panel reveal" style="padding:clamp(var(--space-6),4vw,var(--space-12));box-shadow:inset 0 0 0 1px var(--line), var(--shadow-lg);border-radius:var(--radius-xl)">
+    <div class="panel reveal" data-clarity-mask="True" style="padding:clamp(var(--space-6),4vw,var(--space-12));box-shadow:inset 0 0 0 1px var(--line), var(--shadow-lg);border-radius:var(--radius-xl)">
       <form class="form" data-demo-form novalidate>
         <fieldset class="fieldset">
           <legend><span class="n">01</span>Practice size</legend>
@@ -68,8 +68,47 @@
           <span class="err">Please confirm so we can contact you.</span>
         </fieldset>
 
-        <div class="flex items-center between wrap-f gap-3"><p class="small">Online scheduling is temporarily unavailable. To arrange a demo, email <a class="link" href="mailto:hello@highvolt.tech?subject=Book%20a%20Demo" style="display:inline">hello@highvolt.tech</a>.</p><button class="btn btn--primary btn--lg" type="submit">Book my demo</button></div>
+        <fieldset class="fieldset" data-booking-step hidden>
+          <legend tabindex="-1"><span class="n">05</span>Choose a time</legend>
+          <p class="small muted" data-booking-zone>All times are Sydney time.</p>
+          <div class="field">
+            <span class="label" id="bk-date-label">Date</span>
+            <div class="choice-grid booking-dates" role="radiogroup" aria-labelledby="bk-date-label" data-booking-dates></div>
+          </div>
+          <div class="field">
+            <span class="label" id="bk-time-label">Time <span class="muted">(30 minutes)</span></span>
+            <div class="choice-grid booking-times" role="radiogroup" aria-labelledby="bk-time-label" data-booking-times></div>
+            <p class="xs muted" data-booking-times-hint>Choose a date to see available times.</p>
+          </div>
+          <span class="err">Please choose a time.</span>
+          <div class="field">
+            <span class="label">Security check</span>
+            <div class="turnstile-box" data-turnstile></div>
+            <span class="err">Please complete the security check.</span>
+          </div>
+          <p class="xs muted">Your demo is booked in High Volt Analytics’ Microsoft 365 calendar, which sends your Microsoft Teams invitation. Cloudflare Turnstile checks that this request comes from a person. See our <a class="link" href="/privacy#book-a-demo" style="display:inline">Privacy Policy</a>.</p>
+        </fieldset>
+
+        <p class="small booking-status" role="status" aria-live="polite" data-booking-status></p>
+        <div class="flex items-center between wrap-f gap-3"><p class="small" data-booking-note>Online scheduling is temporarily unavailable. To arrange a demo, email <a class="link" href="mailto:hello@highvolt.tech?subject=Book%20a%20Demo" style="display:inline">hello@highvolt.tech</a>.</p><button class="btn btn--primary btn--lg" type="submit">Book my demo</button></div>
       </form>
+
+      <div class="success" data-booked role="status" aria-live="polite" tabindex="-1">
+        <span class="ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        <h2 class="h2">You’re booked in.</h2>
+        <p class="ink"><b data-booked-when></b></p>
+        <p class="muted small" data-booked-local hidden></p>
+        <p class="muted measure-sm">A Microsoft Teams invitation is on its way to <b class="ink" data-booked-email></b>. Accept it to add the demo to your calendar. Your reference is <b class="ink" data-booked-ref></b>.</p>
+        <p class="muted small measure-sm">Not there in a few minutes? Check your junk folder, or email <a class="link" href="mailto:hello@highvolt.tech?subject=Book%20a%20Demo" style="display:inline">hello@highvolt.tech</a> with your reference. To change the time, reply to the invitation.</p>
+        <div class="btn-row center mt-4"><a class="btn btn--ghost" href="/how-it-works#tour">Explore the interactive tour</a><a class="btn btn--ghost" href="/">Back to home</a></div>
+      </div>
+
+      <div class="success" data-pending role="status" aria-live="polite" tabindex="-1">
+        <span class="ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10.5v6"/><path d="M12 7.5h.01"/></svg></span>
+        <h2 class="h2">We’re finalising your booking.</h2>
+        <p class="muted measure-sm" data-pending-msg></p>
+        <p class="muted small">Reference <b class="ink" data-pending-ref></b></p>
+      </div>
 
       <div class="success" data-success role="status" aria-live="polite" tabindex="-1">
         <span class="ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10.5v6"/><path d="M12 7.5h.01"/></svg></span>
