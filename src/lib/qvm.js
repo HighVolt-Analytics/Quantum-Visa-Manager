@@ -559,16 +559,10 @@
         if (bad) ok = false;
       });
       if (!ok) { const first = $('.has-error', form); first && first.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); return; }
-      const btn = $('[type="submit"]', form); btn.disabled = true; btn.innerHTML = '<span class="spinner" style="border-top-color:currentColor"></span> Sending';
-      setTimeout(() => {
-        const fd = new FormData(form);
-        $('[data-s-name]', succ).textContent = (fd.get('first') || '').toString().trim() || 'there';
-        $('[data-s-email]', succ).textContent = fd.get('email');
-        $('[data-s-focus]', succ).textContent = fd.get('bottleneck') || 'your priority workflow';
-        form.style.display = 'none'; succ.classList.add('is-on'); succ.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
-        icons();
-      }, 900);
+      form.style.display = 'none'; succ.classList.add('is-on'); succ.focus({ preventScroll: true }); succ.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
     });
+    const back = $('[data-back]', succ);
+    back && back.addEventListener('click', () => { succ.classList.remove('is-on'); form.style.display = ''; $('[type="submit"]', form).focus(); });
     $$('input, select, textarea', form).forEach(i => i.addEventListener('input', () => { const f = i.closest('.field') || i.closest('.fieldset'); f && f.classList.remove('has-error'); i.removeAttribute('aria-invalid'); }));
     $$('input[type=radio], input[type=checkbox]', form).forEach(i => i.addEventListener('change', () => { const f = i.closest('.fieldset'); f && f.classList.remove('has-error'); }));
   }
