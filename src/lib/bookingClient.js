@@ -2,7 +2,7 @@
 
 export const SYDNEY = 'Australia/Sydney'
 export const HORIZON_DAYS = 14
-export const CONTACT = 'hello@highvolt.tech'
+export const CONTACT = 'arup@highvolt.tech'
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -96,6 +96,40 @@ export function localEquivalent(iso, visitorZone) {
     .replace(/\s+/g, ' ')
 }
 
+const longSydneyDate = new Intl.DateTimeFormat('en-AU', { timeZone: SYDNEY, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+/** The visitor's local date and time range, or null when they are already on Sydney time. */
+export function localAppointment(startIso, endIso, visitorZone) {
+  const zone = visitorZone || Intl.DateTimeFormat().resolvedOptions().timeZone
+  const start = new Date(startIso)
+  if (!zone || sydneyOffsetMinutes(start) === zoneOffsetMinutes(start, zone)) return null
+  const time = (iso) =>
+    new Intl.DateTimeFormat('en-AU', { timeZone: zone, hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(iso)).replace(/\s+/g, ' ').toLowerCase()
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-AU', { timeZone: zone, weekday: 'long', day: 'numeric', month: 'long', timeZoneName: 'short' })
+      .formatToParts(start)
+      .map(({ type, value }) => [type, value]),
+  )
+  const range = endIso ? `${time(startIso)}–${time(endIso)}` : time(startIso)
+  return `${parts.weekday} ${parts.day} ${parts.month}, ${range} ${parts.timeZoneName}`
+}
+
+/**
+ * Everything the confirmation screen shows, derived only from the booking API's confirmed
+ * slot and reference plus the email address the visitor entered.
+ */
+export function confirmationDetails({ slot, reference }, email, visitorZone) {
+  const start = new Date(slot.start)
+  return {
+    date: longSydneyDate.format(start),
+    time: slot.end ? `${formatSydneyTime(slot.start)}–${formatSydneyTime(slot.end)}` : formatSydneyTime(slot.start),
+    zone: `Sydney time, ${sydneyZoneLabel(start)}`,
+    local: localAppointment(slot.start, slot.end, visitorZone),
+    email: String(email || '').trim(),
+    reference: String(reference),
+  }
+}
+
 function zoneOffsetMinutes(date, zone) {
   const p = Object.fromEntries(
     new Intl.DateTimeFormat('en-CA', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -122,12 +156,15 @@ export function idempotencyKeyFor(previous, { slotStart, email }, newKey) {
   return { key: newKey(), fingerprint }
 }
 
-const fallback = (message) => message || `Something went wrong. Please try again or email ${CONTACT}.`
+/** API messages name the service's own contact address; visitors are pointed to CONTACT instead. */
+export const withBookingContact = (message) => String(message || '').replace(/[A-Za-z0-9._%+-]+@highvolt\.tech/gi, CONTACT)
+
+const fallback = (message) => withBookingContact(message) || `Something went wrong. Please try again or email ${CONTACT}.`
 
 /** Maps a booking API response to what the page should do next. Never invents a confirmation. */
 export function interpretBooking(httpStatus, body) {
   const b = body && typeof body === 'object' ? body : {}
-  const message = typeof b.message === 'string' ? b.message : ''
+  const message = typeof b.message === 'string' ? withBookingContact(b.message) : ''
   if (httpStatus === 200 && b.status === 'confirmed' && b.slot?.start && b.reference) {
     return { kind: 'confirmed', reference: b.reference, slot: b.slot, message }
   }
