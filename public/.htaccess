@@ -3,13 +3,11 @@ DirectoryIndex index.html
 RewriteEngine On
 RewriteBase /
 
-# Releases are packaged with a 1970 mtime, so without an explicit policy browsers
-# heuristically cache pages for years and keep running a previous release.
-<IfModule mod_headers.c>
-  <FilesMatch "\.html$">
-    Header set Cache-Control "no-cache"
-  </FilesMatch>
-</IfModule>
+# Pages must be revalidated on every visit so returning visitors receive each release.
+# Hashed /assets files keep the host's long-lived caching.
+<FilesMatch "\.html$">
+  Header set Cache-Control "no-cache, max-age=0, must-revalidate"
+</FilesMatch>
 
 # Serve real files and directories as-is. React Router handles SPA routes.
 RewriteRule ^index\.html$ - [L]

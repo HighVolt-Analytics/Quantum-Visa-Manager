@@ -85,10 +85,17 @@ test('pages are revalidated so returning visitors receive each release', async (
   const htaccess = await readFile(new URL('../public/.htaccess', import.meta.url), 'utf8')
   const block = htaccess.match(/<FilesMatch "\\\.html\$">([\s\S]*?)<\/FilesMatch>/)
   assert.ok(block, 'public/.htaccess must set a cache policy for HTML pages')
-  assert.match(block[1], /Header set Cache-Control "no-cache"/)
+  assert.match(block[1], /^\s*Header set Cache-Control "no-cache, max-age=0, must-revalidate"\s*$/)
+  assert.ok(!/<IfModule/.test(htaccess), 'the header rule must not depend on an IfModule check the host may not evaluate')
   assert.ok(htaccess.indexOf('<FilesMatch') < htaccess.indexOf('RewriteRule ^ index.html'), 'policy must sit before the SPA fallback')
-  assert.equal((htaccess.match(/no-cache|no-store|max-age/g) || []).length, 1, 'versioned /assets keep the host caching policy')
+  assert.equal((htaccess.match(/Cache-Control|Expires|no-store/g) || []).length, 1, 'versioned /assets keep the host caching policy')
   for (const rule of ['Options -MultiViews', 'DirectoryIndex index.html', 'RewriteRule ^index\\.html$ - [L]', 'RewriteCond %{REQUEST_FILENAME} !-f', 'RewriteCond %{REQUEST_FILENAME} !-d', 'RewriteRule ^ index.html [L]']) {
     assert.ok(htaccess.includes(rule), `SPA routing rule preserved: ${rule}`)
   }
+})
+
+test('deployed files get a fresh mtime so the host reloads .htaccess', async () => {
+  const workflow = await readFile(WORKFLOW, 'utf8')
+  assert.ok(workflow.includes("tar --sort=name --mtime='UTC 1970-01-01'"), 'the release artifact stays reproducible')
+  assert.ok(workflow.includes('"tar -x -m -f - -C $target_q --no-same-owner --no-same-permissions"'), 'production extraction must stamp files with the deploy time')
 })
