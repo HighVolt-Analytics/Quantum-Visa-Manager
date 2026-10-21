@@ -90,17 +90,26 @@
         </fieldset>
 
         <p class="small booking-status" role="status" aria-live="polite" data-booking-status></p>
-        <div class="flex items-center between wrap-f gap-3"><p class="small" data-booking-note>Online scheduling is temporarily unavailable. To arrange a demo, email <a class="link" href="mailto:hello@highvolt.tech?subject=Book%20a%20Demo" style="display:inline">hello@highvolt.tech</a>.</p><button class="btn btn--primary btn--lg" type="submit">Book my demo</button></div>
+        <div class="flex items-center between wrap-f gap-3"><p class="small" data-booking-note>Online scheduling is temporarily unavailable. To arrange a demo, email <a class="link" href="mailto:arup@highvolt.tech?subject=Book%20a%20Demo" style="display:inline">arup@highvolt.tech</a>.</p><button class="btn btn--primary btn--lg" type="submit">Book my demo</button></div>
       </form>
 
-      <div class="success" data-booked role="status" aria-live="polite" tabindex="-1">
-        <span class="ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-        <h2 class="h2">You’re booked in.</h2>
-        <p class="ink"><b data-booked-when></b></p>
-        <p class="muted small" data-booked-local hidden></p>
-        <p class="muted measure-sm">A Microsoft Teams invitation is on its way to <b class="ink" data-booked-email></b>. Accept it to add the demo to your calendar. Your reference is <b class="ink" data-booked-ref></b>.</p>
-        <p class="muted small measure-sm">Not there in a few minutes? Check your junk folder, or email <a class="link" href="mailto:hello@highvolt.tech?subject=Book%20a%20Demo" style="display:inline">hello@highvolt.tech</a> with your reference. To change the time, reply to the invitation.</p>
-        <div class="btn-row center mt-4"><a class="btn btn--ghost" href="/how-it-works#tour">Explore the interactive tour</a><a class="btn btn--ghost" href="/">Back to home</a></div>
+      <div class="success booked" data-booked role="status" aria-live="polite" aria-labelledby="booked-title" tabindex="-1">
+        <div class="booked-mark" aria-hidden="true">
+          <span class="booked-glow"></span>
+          <span class="booked-sparks"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        </div>
+        <h2 class="h2" id="booked-title">You’re booked in.</h2>
+        <p class="muted measure-sm booked-lead">Your demonstration is confirmed. A Microsoft Teams invitation is on its way.</p>
+        <dl class="booked-summary">
+          <div class="booked-row"><dt>Date</dt><dd data-booked-date></dd></div>
+          <div class="booked-row"><dt>Time</dt><dd><span data-booked-time></span><span class="booked-zone" data-booked-zone></span></dd></div>
+          <div class="booked-row" data-booked-local-row hidden><dt>Your local time</dt><dd data-booked-local></dd></div>
+          <div class="booked-row"><dt>Invitation sent to</dt><dd class="booked-email" data-booked-email></dd></div>
+          <div class="booked-row"><dt>Booking reference</dt><dd class="booked-ref" data-booked-ref></dd></div>
+        </dl>
+        <p class="muted small measure-sm booked-help">Accept the invitation to add the demo to your calendar. Not in your inbox within a few minutes? Check your junk or spam folder, or email <a class="link" href="mailto:arup@highvolt.tech?subject=Book%20a%20Demo" style="display:inline">arup@highvolt.tech</a> with your reference. To change the time, reply to the invitation.</p>
+        <div class="btn-row center booked-actions"><a class="btn btn--ghost" href="/how-it-works#tour">Explore the interactive tour</a><a class="btn btn--ghost" href="/">Back to home</a></div>
       </div>
 
       <div class="success" data-pending role="status" aria-live="polite" tabindex="-1">
@@ -113,8 +122,8 @@
       <div class="success" data-success role="status" aria-live="polite" tabindex="-1">
         <span class="ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10.5v6"/><path d="M12 7.5h.01"/></svg></span>
         <h2 class="h2">Online scheduling is temporarily unavailable.</h2>
-        <p class="muted measure-sm">This form doesn’t send your answers yet, so no demo has been booked. To arrange one, please email <a class="link" href="mailto:hello@highvolt.tech?subject=Book%20a%20Demo" style="display:inline">hello@highvolt.tech</a>.</p>
-        <div class="btn-row center mt-4"><a class="btn btn--primary" href="mailto:hello@highvolt.tech?subject=Book%20a%20Demo">Email hello@highvolt.tech</a><button class="btn btn--ghost" type="button" data-back>Back to the form</button></div>
+        <p class="muted measure-sm">This form doesn’t send your answers yet, so no demo has been booked. To arrange one, please email <a class="link" href="mailto:arup@highvolt.tech?subject=Book%20a%20Demo" style="display:inline">arup@highvolt.tech</a>.</p>
+        <div class="btn-row center mt-4"><a class="btn btn--primary" href="mailto:arup@highvolt.tech?subject=Book%20a%20Demo">Email arup@highvolt.tech</a><button class="btn btn--ghost" type="button" data-back>Back to the form</button></div>
       </div>
     </div>
 

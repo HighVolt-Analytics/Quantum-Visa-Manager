@@ -2,16 +2,20 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { describe, it } from 'node:test'
 import {
+  CONTACT,
   buildBookingPayload,
   buildDateOptions,
+  confirmationDetails,
   createBookingApi,
   formatSydneyTime,
   idempotencyKeyFor,
   interpretAvailability,
   interpretBooking,
   isBookingConfigured,
+  localAppointment,
   localEquivalent,
   sydneyZoneLabel,
+  withBookingContact,
 } from '../src/lib/bookingClient.js'
 
 const slot = (start, date, time) => ({ start, end: new Date(Date.parse(start) + 1800000).toISOString(), date, time })
@@ -164,5 +168,100 @@ describe('Book a Demo page markup', async () => {
     assert.match(html, /<fieldset class="fieldset" data-booking-step hidden>/)
     assert.match(html, /class="panel reveal" data-clarity-mask="True"/)
     assert.match(html, /href="\/privacy#book-a-demo"/)
+  })
+
+  it('announces the confirmation and keeps every detail and action', () => {
+    const panel = html.match(/<div class="success booked" data-booked([\s\S]*?)\n {6}<\/div>/)
+    assert.ok(panel, 'confirmation panel')
+    assert.match(panel[0], /role="status" aria-live="polite" aria-labelledby="booked-title" tabindex="-1"/)
+    assert.match(panel[0], /<h2 class="h2" id="booked-title">You’re booked in\.<\/h2>/)
+    for (const hook of ['date', 'time', 'zone', 'local', 'local-row', 'email', 'ref']) assert.ok(panel[0].includes(`data-booked-${hook}`), hook)
+    assert.match(panel[0], /junk or spam folder/)
+    assert.match(panel[0], /reply to the invitation/)
+    assert.match(panel[0], /href="\/how-it-works#tour">Explore the interactive tour</)
+    assert.match(panel[0], /href="\/">Back to home</)
+    assert.match(panel[0], /class="booked-mark" aria-hidden="true"/)
+  })
+})
+
+describe('confirmation details', () => {
+  const confirmed = { slot: { start: '2026-10-26T01:00:00.000Z', end: '2026-10-26T01:30:00.000Z' }, reference: 'QVM-ABC234' }
+
+  it('shows the API-confirmed Sydney date, time and daylight-saving zone', () => {
+    const d = confirmationDetails(confirmed, ' visitor@example.test ', 'Australia/Sydney')
+    assert.deepEqual(d, {
+      date: 'Monday 26 October 2026',
+      time: '12:00 pm–12:30 pm',
+      zone: 'Sydney time, AEDT (UTC+11)',
+      local: null,
+      email: 'visitor@example.test',
+      reference: 'QVM-ABC234',
+    })
+  })
+
+  it('uses standard time before the October change', () => {
+    const d = confirmationDetails({ slot: { start: '2026-10-02T00:00:00.000Z', end: '2026-10-02T00:30:00.000Z' }, reference: 'QVM-X' }, 'a@b.test', 'Australia/Sydney')
+    assert.equal(d.date, 'Friday 2 October 2026')
+    assert.equal(d.time, '10:00 am–10:30 am')
+    assert.equal(d.zone, 'Sydney time, AEST (UTC+10)')
+  })
+
+  it('adds the visitor local date and time outside Sydney time', () => {
+    assert.equal(confirmationDetails(confirmed, 'a@b.test', 'Asia/Kolkata').local, 'Monday 26 October, 6:30 am–7:00 am GMT+5:30')
+    assert.match(localAppointment('2026-10-26T01:00:00.000Z', '2026-10-26T01:30:00.000Z', 'America/Los_Angeles'), /^Sunday 25 October, 6:00 pm–6:30 pm \S+$/)
+    assert.equal(localAppointment('2026-10-26T01:00:00.000Z', '2026-10-26T01:30:00.000Z', 'Australia/Melbourne'), null)
+  })
+
+  it('never invents an end time', () => {
+    assert.equal(confirmationDetails({ slot: { start: confirmed.slot.start }, reference: 'R' }, '', 'Australia/Sydney').time, '12:00 pm')
+  })
+})
+
+describe('booking contact', () => {
+  it('points visitors to the booking contact, including in API messages', () => {
+    assert.equal(CONTACT, 'arup@highvolt.tech')
+    assert.equal(withBookingContact('Please email hello@highvolt.tech.'), 'Please email arup@highvolt.tech.')
+    const cases = [
+      interpretBooking(409, { status: 'already_booked', message: 'To change it, reply to your invitation or email hello@highvolt.tech.' }),
+      interpretBooking(202, { status: 'pending', reference: 'QVM-1', message: "If it doesn't, email hello@highvolt.tech." }),
+      interpretBooking(503, { status: 'failed', message: 'Please choose another time or email hello@highvolt.tech.' }),
+      interpretBooking(500, null),
+      interpretAvailability(503, { status: 'unavailable', message: 'Online scheduling is temporarily unavailable. Please email hello@highvolt.tech.' }),
+      interpretAvailability(500, { status: 'error', message: 'Something went wrong. Please email hello@highvolt.tech.' }),
+    ]
+    for (const r of cases) {
+      assert.ok(r.message.includes('arup@highvolt.tech'), r.message)
+      assert.ok(!r.message.includes('hello@'), r.message)
+    }
+  })
+
+  it('uses the booking contact everywhere on the Book a Demo page and nowhere else', async () => {
+    const files = ['../src/content/BookDemo.html', '../src/lib/bookDemo.js', '../src/lib/bookingClient.js']
+    for (const f of files) assert.ok(!(await readFile(new URL(f, import.meta.url), 'utf8')).includes('hello@highvolt.tech'), f)
+    const page = await readFile(new URL('../src/content/BookDemo.html', import.meta.url), 'utf8')
+    assert.equal((page.match(/mailto:arup@highvolt\.tech\?subject=Book%20a%20Demo/g) || []).length, 4)
+    const support = await readFile(new URL('../src/content/Support.html', import.meta.url), 'utf8')
+    assert.ok(support.includes('hello@highvolt.tech'), 'unrelated support contact is unchanged')
+  })
+})
+
+describe('confirmation animation', async () => {
+  const css = await readFile(new URL('../src/styles/style.css', import.meta.url), 'utf8')
+  const js = await readFile(new URL('../src/lib/bookDemo.js', import.meta.url), 'utf8')
+
+  it('is started only from the confirmed-booking path, once per page view', () => {
+    assert.equal((js.match(/is-celebrating/g) || []).length, 1)
+    const showBooked = js.slice(js.indexOf('function showBooked'), js.indexOf('function showPending'))
+    assert.match(showBooked, /if \(!booked\.dataset\.celebrated\) \{\s*booked\.dataset\.celebrated = 'true'\s*booked\.classList\.add\('is-celebrating'\)/)
+    assert.match(js, /r\.kind === 'confirmed' \? showBooked\(r, email\) : showPending\(r\)/)
+  })
+
+  it('animates only inside the confirmed panel and respects reduced motion', () => {
+    const effects = [...css.matchAll(/^\.booked\.is-celebrating[^{]*\{[^}]*animation:/gm)]
+    assert.ok(effects.length >= 5)
+    const reduced = css.match(/@media \(prefers-reduced-motion: reduce\) \{\s*\.booked\.is-on, \.booked\.is-on \* \{ animation: none !important; \}([\s\S]*?)\n\}/)
+    assert.ok(reduced, 'reduced-motion override for the confirmation')
+    assert.match(reduced[1], /\.booked \.ok path \{ stroke-dashoffset: 0; \}/)
+    assert.match(reduced[1], /\.booked-glow, \.booked-sparks \{ display: none; \}/)
   })
 })

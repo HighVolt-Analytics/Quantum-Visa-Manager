@@ -3,6 +3,7 @@ import {
   CONTACT,
   buildBookingPayload,
   buildDateOptions,
+  confirmationDetails,
   createBookingApi,
   formatSydneyTime,
   idempotencyKeyFor,
@@ -44,9 +45,6 @@ function el(tag, attrs = {}, ...children) {
   for (const c of children) if (c !== null && c !== undefined) node.append(c)
   return node
 }
-
-const longDate = (iso) =>
-  new Intl.DateTimeFormat('en-AU', { timeZone: 'Australia/Sydney', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(iso))
 
 /**
  * Wires the booking step into the existing questionnaire. Returns null when the site was built
@@ -243,17 +241,24 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
     if (first) scrollTo(first)
   }
 
+  /** Only called for a confirmed API response. The celebration plays once per page view. */
   function showBooked(result, email) {
-    const { start, end } = result.slot
-    booked.querySelector('[data-booked-when]').textContent =
-      `${longDate(start)}, ${formatSydneyTime(start)}–${formatSydneyTime(end)} Sydney time, ${sydneyZoneLabel(new Date(start))}`
-    const local = localEquivalent(start)
-    const localNode = booked.querySelector('[data-booked-local]')
-    localNode.textContent = local ? `That's ${local} where you are.` : ''
-    localNode.hidden = !local
-    booked.querySelector('[data-booked-email]').textContent = email
-    booked.querySelector('[data-booked-ref]').textContent = result.reference
+    const d = confirmationDetails(result, email)
+    const put = (hook, text) => {
+      booked.querySelector(`[data-booked-${hook}]`).textContent = text
+    }
+    put('date', d.date)
+    put('time', d.time)
+    put('zone', d.zone)
+    put('local', d.local || '')
+    booked.querySelector('[data-booked-local-row]').hidden = !d.local
+    put('email', d.email)
+    put('ref', d.reference)
     form.style.display = 'none'
+    if (!booked.dataset.celebrated) {
+      booked.dataset.celebrated = 'true'
+      booked.classList.add('is-celebrating')
+    }
     booked.classList.add('is-on')
     booked.focus({ preventScroll: true })
     scrollTo(booked)

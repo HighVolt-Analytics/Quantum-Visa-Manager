@@ -87,4 +87,8 @@ test('pages are revalidated so returning visitors receive each release', async (
   assert.ok(block, 'public/.htaccess must set a cache policy for HTML pages')
   assert.match(block[1], /Header set Cache-Control "no-cache"/)
   assert.ok(htaccess.indexOf('<FilesMatch') < htaccess.indexOf('RewriteRule ^ index.html'), 'policy must sit before the SPA fallback')
+  assert.equal((htaccess.match(/no-cache|no-store|max-age/g) || []).length, 1, 'versioned /assets keep the host caching policy')
+  for (const rule of ['Options -MultiViews', 'DirectoryIndex index.html', 'RewriteRule ^index\\.html$ - [L]', 'RewriteCond %{REQUEST_FILENAME} !-f', 'RewriteCond %{REQUEST_FILENAME} !-d', 'RewriteRule ^ index.html [L]']) {
+    assert.ok(htaccess.includes(rule), `SPA routing rule preserved: ${rule}`)
+  }
 })

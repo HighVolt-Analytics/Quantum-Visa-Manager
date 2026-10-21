@@ -49,6 +49,9 @@ jobs:
       - name: Validate deployment trigger policy
         run: node --test tests/deployment-trigger-policy.test.mjs
 
+      - name: Validate Book a Demo client
+        run: node --test tests/book-demo-client.test.mjs
+
       - name: Verify Vite output and SPA assets
         run: |
           set -euo pipefail
