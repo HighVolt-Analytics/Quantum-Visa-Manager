@@ -6,7 +6,7 @@ import Solutions from '../content/Solutions.html?raw'
 import CorporateSponsorship from '../content/CorporateSponsorship.html?raw'
 import PracticeGrowth from '../content/PracticeGrowth.html?raw'
 import HowItWorks from '../content/HowItWorks.html?raw'
-import Pricing from '../content/Pricing.html?raw'
+import Pricing from '../content/Pricing.html?raw' // two-card pricing: Free Trial + Enterprise
 import Resources from '../content/Resources.html?raw'
 import Support from '../content/Support.html?raw'
 import BookDemo from '../content/BookDemo.html?raw'

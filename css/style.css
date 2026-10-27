@@ -761,17 +761,31 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
 .subnav a.is-on { color: var(--ink); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); }
 
 /* ---------- Pricing ---------- */
-.plans { display: grid; gap: var(--space-4); }
-@media (min-width: 980px) { .plans { grid-template-columns: repeat(3, 1fr); } }
+.plans { display: grid; gap: var(--space-5); max-width: 920px; margin-inline: auto; }
+@media (min-width: 860px) { .plans { grid-template-columns: 1fr 1fr; align-items: start; } }
 .plan { border-radius: var(--radius-xl); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); padding: clamp(var(--space-6), 3vw, var(--space-8)); display: grid; gap: var(--space-6); align-content: start; position: relative; }
 .plan--feature { box-shadow: inset 0 0 0 1.5px var(--ink), var(--shadow-lg); }
-.plan .price { display: grid; gap: 4px; padding-bottom: var(--space-6); border-bottom: 1px solid var(--line); }
-.plan .price .v { font-size: var(--text-xl); font-weight: 600; letter-spacing: -0.035em; }
-.plan .price small { font-size: 12.5px; color: var(--muted); }
+.plan .price { display: grid; gap: 6px; }
+.plan .price-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.plan .price .v { font-size: clamp(2.25rem, 1.6rem + 2vw, 3.25rem); font-weight: 700; letter-spacing: -0.045em; line-height: 1; }
+.plan .price .u { font-size: var(--text-lg); color: var(--muted); font-weight: 500; }
+.plan .price small { font-size: 13.5px; color: var(--ink-2); }
+.plan-cta { display: grid; gap: var(--space-3); }
+.plan-cta .btn { width: 100%; }
+.plan-note { font-size: 12.5px; color: var(--muted); line-height: 1.45; text-align: center; }
+.plan-incl { display: grid; gap: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--line); }
 .plan ul { display: grid; gap: 10px; }
 .plan li { display: grid; grid-template-columns: 18px 1fr; gap: 10px; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
 .plan li svg { width: 15px; height: 15px; color: var(--accent); margin-top: 3px; }
 .plan .flag { position: absolute; top: var(--space-6); right: var(--space-6); }
+.plan-meta { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); padding-top: var(--space-2); border-top: 1px solid var(--line); }
+.plan-meta > div { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; }
+.plan-meta svg { width: 16px; height: 16px; color: var(--muted); margin-top: 2px; }
+.plan-meta b { display: block; font-size: 12.5px; font-weight: 600; }
+.plan-meta span { display: block; font-size: 12.5px; color: var(--muted); }
+.plan-foot { display: grid; gap: 6px; padding-top: var(--space-2); border-top: 1px solid var(--line); }
+.plan-foot b { font-size: 14px; }
+.plan-foot p { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
 
 /* ---------- Resources ---------- */
 .feed { display: grid; border-top: 1px solid var(--line); }
