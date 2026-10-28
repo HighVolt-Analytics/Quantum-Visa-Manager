@@ -484,6 +484,18 @@ body.nav-open { overflow: hidden; }
 .g4 { grid-template-columns: 1fr 1fr; }
 @media (min-width: 760px) { .g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1000px) { .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); } }
+.video-grid { display: grid; gap: var(--space-8) var(--space-5); grid-template-columns: 1fr; }
+@media (min-width: 900px) { .video-grid { grid-template-columns: repeat(3, 1fr); } }
+.video-item { display: grid; gap: var(--space-3); margin: 0; }
+.video-stage, .video-frame { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius-lg); overflow: hidden; background: #101820; }
+.video-facade { position: absolute; inset: 0; width: 100%; display: grid; place-items: center; cursor: pointer; background: #101820; }
+.video-facade img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(.72) brightness(.78); }
+.video-facade::after { content: ""; position: absolute; inset: 0; background: rgba(12, 16, 22, .22); pointer-events: none; }
+.video-facade:hover .video-play, .video-facade:focus-visible .video-play { transform: scale(1.06); }
+.video-play { position: relative; z-index: 1; width: 64px; height: 64px; border-radius: 50%; background: #fff; color: #161417; display: grid; place-items: center; box-shadow: 0 10px 28px rgba(0, 0, 0, .28); transition: transform .2s var(--ease); }
+.video-play svg { width: 26px; height: 26px; margin-left: 3px; fill: currentColor; }
+.video-frame iframe { position: absolute; top: -52px; left: 0; width: 100%; height: calc(100% + 52px); border: 0; }
+.video-item figcaption { font-size: var(--text-base); font-weight: 600; letter-spacing: -0.015em; color: var(--ink); }
 .card { background: var(--surface); border-radius: var(--radius-lg); box-shadow: inset 0 0 0 1px var(--line); padding: clamp(var(--space-6), 2.6vw, var(--space-8)); display: grid; align-content: start; gap: var(--space-3); position: relative; }
 .card--lift { transition: transform .5s var(--ease), box-shadow .5s var(--ease); }
 .card--lift:hover { transform: translateY(-3px); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-md); }
@@ -781,6 +793,8 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
 .plan-meta { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); padding-top: var(--space-2); border-top: 1px solid var(--line); }
 .plan-meta > div { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; }
 .plan-meta svg { width: 16px; height: 16px; color: var(--muted); margin-top: 2px; }
+.plan-meta svg.ico-rainbow { stroke: url(#data-rainbow); }
+.rainbow-def { position: absolute; width: 0; height: 0; overflow: hidden; }
 .plan-meta b { display: block; font-size: 12.5px; font-weight: 600; }
 .plan-meta span { display: block; font-size: 12.5px; color: var(--muted); }
 .plan-foot { display: grid; gap: 6px; padding-top: var(--space-2); border-top: 1px solid var(--line); }
@@ -807,6 +821,12 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
 .modal-close { position: absolute; top: 14px; right: 14px; z-index: 5; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
 .modal-close svg { width: 14px; height: 14px; }
 .modal-pad { padding: clamp(var(--space-6), 4vw, var(--space-12)); }
+.modal--video { background: rgba(10, 10, 11, .62); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.modal-box--video { width: min(920px, calc(100vw - 48px)); background: #000; overflow: hidden; }
+.modal-box--video .modal-close { background: rgba(16, 16, 18, .72); color: #fff; box-shadow: none; }
+.video-pop { position: relative; aspect-ratio: 16 / 9; }
+.video-pop iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+body.modal-open { overflow: hidden; }
 .article { display: grid; gap: var(--space-4); }
 .article h3 { font-size: var(--text-lg); margin-top: var(--space-4); }
 .article p, .article li { color: var(--ink-2); line-height: 1.7; font-size: var(--text-base); }

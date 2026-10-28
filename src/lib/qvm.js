@@ -526,8 +526,9 @@ import { setupBooking } from './bookDemo.js';
     const m = document.createElement('div'); m.className = 'modal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
     m.innerHTML = `<div class="modal-box ${narrow ? 'modal-box--narrow' : ''}"><button class="modal-close" aria-label="Close">${I('x')}</button>${html}</div>`;
     document.body.appendChild(m); icons();
+    document.body.classList.add('modal-open');
     const prev = document.activeElement;
-    const close = () => { m.classList.remove('is-open'); document.removeEventListener('keydown', key); setTimeout(() => { m.remove(); prev && prev.focus(); }, 350); };
+    const close = () => { m.classList.remove('is-open'); document.body.classList.remove('modal-open'); document.removeEventListener('keydown', key); setTimeout(() => { m.remove(); prev && prev.focus(); }, 350); };
     const key = e => { if (e.key === 'Escape') close(); if (e.key === 'Tab') { const f = $$('button, a, input, [tabindex="0"]', m).filter(x => !x.disabled); if (!f.length) return; const a = f[0], z = f[f.length - 1]; if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); } } };
     m.addEventListener('click', e => { if (e.target === m) close(); }); $('.modal-close', m).onclick = close; document.addEventListener('keydown', key);
     requestAnimationFrame(() => { m.classList.add('is-open'); $('.modal-close', m).focus(); });
@@ -574,10 +575,32 @@ import { setupBooking } from './bookDemo.js';
     $$('input[type=radio], input[type=checkbox]', form).forEach(i => i.addEventListener('change', () => { const f = i.closest('.fieldset'); f && f.classList.remove('has-error'); }));
   }
 
+  /* ------------------------------------------------------- Walkthrough videos */
+  function youtubeVideos() {
+    $$('[data-youtube]').forEach((btn) => {
+      if (btn.dataset.bound === '1') return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.youtube;
+        if (!/^[\w-]{6,}$/.test(id)) return;
+        const caption = $('figcaption', btn.closest('.video-item'))?.textContent || 'Walkthrough';
+        const m = modal(`<div class="video-pop"><iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&color=white&playsinline=1" title="${caption.replace(/"/g, '')}" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe></div>`);
+        m.classList.add('modal--video');
+        $('.modal-box', m).classList.add('modal-box--video');
+      });
+    });
+  }
+
   /* ------------------------------------------------------------ Subnav spy */
   function subnav(nav) {
-    const links = $$('a', nav), secs = links.map(a => $(a.getAttribute('href'))).filter(Boolean);
-    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { links.forEach(l => l.classList.toggle('is-on', l.getAttribute('href') === '#' + e.target.id)); const on = links.find(l => l.classList.contains('is-on')); on && on.scrollIntoView({ inline: 'center', block: 'nearest' }); } }), { rootMargin: '-40% 0px -55% 0px' });
+    const links = $$('a', nav), scroller = $('.wrap', nav) || nav, secs = links.map(a => $(a.getAttribute('href'))).filter(Boolean);
+    const io = new IntersectionObserver(es => es.forEach(e => {
+      if (!e.isIntersecting) return;
+      links.forEach(l => l.classList.toggle('is-on', l.getAttribute('href') === '#' + e.target.id));
+      const on = links.find(l => l.classList.contains('is-on'));
+      if (!on) return;
+      scroller.scrollTo({ left: Math.max(0, on.offsetLeft - (scroller.clientWidth - on.clientWidth) / 2), behavior: 'auto' });
+    }), { rootMargin: '-40% 0px -55% 0px' });
     secs.forEach(s => io.observe(s));
   }
 
@@ -599,6 +622,7 @@ import { setupBooking } from './bookDemo.js';
     scope('[data-estimator]').forEach(estimator);
     scope('[data-fee-est]').forEach(feeEst);
     scope('[data-watch]').forEach(watch);
+    youtubeVideos();
     scope('[data-demo-form]').forEach(demoForm);
     scope('.subnav').forEach(subnav);
     scope('[data-clip]').forEach((el) => Clip(el, CLIPS[el.dataset.clip]));
