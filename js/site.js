@@ -583,8 +583,14 @@
 
   /* ------------------------------------------------------------ Subnav spy */
   function subnav(nav) {
-    const links = $$('a', nav), secs = links.map(a => $(a.getAttribute('href'))).filter(Boolean);
-    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { links.forEach(l => l.classList.toggle('is-on', l.getAttribute('href') === '#' + e.target.id)); const on = links.find(l => l.classList.contains('is-on')); on && on.scrollIntoView({ inline: 'center', block: 'nearest' }); } }), { rootMargin: '-40% 0px -55% 0px' });
+    const links = $$('a', nav), scroller = $('.wrap', nav) || nav, secs = links.map(a => $(a.getAttribute('href'))).filter(Boolean);
+    const io = new IntersectionObserver(es => es.forEach(e => {
+      if (!e.isIntersecting) return;
+      links.forEach(l => l.classList.toggle('is-on', l.getAttribute('href') === '#' + e.target.id));
+      const on = links.find(l => l.classList.contains('is-on'));
+      if (!on) return;
+      scroller.scrollTo({ left: Math.max(0, on.offsetLeft - (scroller.clientWidth - on.clientWidth) / 2), behavior: 'auto' });
+    }), { rootMargin: '-40% 0px -55% 0px' });
     secs.forEach(s => io.observe(s));
   }
 
