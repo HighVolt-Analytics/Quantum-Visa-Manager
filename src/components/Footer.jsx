@@ -59,7 +59,7 @@ export default function Footer() {
             title="Company"
             items={[
               ['About', '/resources#about'],
-              ['Product updates', '/resources#updates'],
+              ['Product Videos', '/resources#product-videos'],
               ['Guides', '/resources#guides'],
               ['Pricing', '/pricing'],
               ['Contact', '/support#contact'],
