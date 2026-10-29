@@ -70,7 +70,7 @@ import { setupBooking } from './bookDemo.js';
           <a class="status-dot" href="support.html#status">All systems operational</a></div>
         ${col('Platform', [['Visa Operations', 'visa-operations.html'], ['Correspondence & Tasks', 'platform.html#correspondence'], ['Document & Checklist', 'platform.html#documents'], ['Form Preparation', 'platform.html#forms'], ['Visa Library', 'platform.html#library'], ['AI Control', 'ai-control-security.html']])}
         ${col('Solutions', [['Migration Practices', 'solutions.html#practices'], ['Corporate Sponsorship', 'corporate-sponsorship.html'], ['Practice Growth', 'practice-growth.html'], ['Skills Assessment — soon', 'solutions.html#skills'], ['Interactive Tour', 'how-it-works.html#tour']])}
-        ${col('Company', [['About', 'resources.html#about'], ['Product updates', 'resources.html#updates'], ['Guides', 'resources.html#guides'], ['Pricing', 'pricing.html'], ['Contact', 'support.html#contact'], ['Book a Demo', 'book-demo.html']])}
+        ${col('Company', [['About', 'resources.html#about'], ['Product Videos', 'resources.html#product-videos'], ['Guides', 'resources.html#guides'], ['Pricing', 'pricing.html'], ['Contact', 'support.html#contact'], ['Book a Demo', 'book-demo.html']])}
         ${col('Support & Legal', [['Support', 'support.html'], ['Product status', 'support.html#status'], ['Security', 'ai-control-security.html#security'], ['Data residency', 'ai-control-security.html#residency'], ['Privacy', 'privacy.html'], ['Terms', 'terms.html']])}
       </div>
       <div class="f-ack">
@@ -591,17 +591,51 @@ import { setupBooking } from './bookDemo.js';
     });
   }
 
+  /* ------------------------------------------------------- Video section tabs */
+  function videoTabs(root) {
+    const tabs = $$('[data-video-tab]', root);
+    const panels = $$('[data-video-panel]', root);
+    if (!tabs.length || !panels.length) return;
+    const show = (name, scroll) => {
+      panels.forEach((p) => {
+        const on = p.dataset.videoPanel === name;
+        p.hidden = !on;
+        if (on) $$('.reveal', p).forEach((el) => el.classList.add('is-in'));
+      });
+      tabs.forEach((t) => {
+        const on = t.dataset.videoTab === name;
+        t.classList.toggle('is-on', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      if (scroll) {
+        const sec = $('#videos', root) || $('#videos');
+        sec && sec.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+      }
+    };
+    tabs.forEach((t) => {
+      if (t.dataset.bound === '1') return;
+      t.dataset.bound = '1';
+      t.addEventListener('click', (e) => {
+        e.preventDefault();
+        show(t.dataset.videoTab, true);
+      });
+    });
+    show(location.hash === '#product-videos' ? 'product' : 'features', false);
+  }
+
   /* ------------------------------------------------------------ Subnav spy */
   function subnav(nav) {
-    const links = $$('a', nav), scroller = $('.wrap', nav) || nav, secs = links.map(a => $(a.getAttribute('href'))).filter(Boolean);
-    const io = new IntersectionObserver(es => es.forEach(e => {
-      if (!e.isIntersecting) return;
-      links.forEach(l => l.classList.toggle('is-on', l.getAttribute('href') === '#' + e.target.id));
+    const links = $$('a', nav), tabs = links.filter(a => a.hasAttribute('data-video-tab')), spyLinks = links.filter(a => !a.hasAttribute('data-video-tab')), scroller = $('.wrap', nav) || nav, secs = spyLinks.map(a => $(a.getAttribute('href'))).filter(Boolean);
+    const mark = (id) => {
+      spyLinks.forEach(l => l.classList.toggle('is-on', l.getAttribute('href') === '#' + id));
+      tabs.forEach(t => t.classList.toggle('is-on', id === 'videos' && t.getAttribute('aria-selected') === 'true'));
       const on = links.find(l => l.classList.contains('is-on'));
-      if (!on) return;
-      scroller.scrollTo({ left: Math.max(0, on.offsetLeft - (scroller.clientWidth - on.clientWidth) / 2), behavior: 'auto' });
-    }), { rootMargin: '-40% 0px -55% 0px' });
+      if (on) scroller.scrollTo({ left: Math.max(0, on.offsetLeft - (scroller.clientWidth - on.clientWidth) / 2), behavior: 'auto' });
+    };
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) mark(e.target.id); }), { rootMargin: '-40% 0px -55% 0px' });
     secs.forEach(s => io.observe(s));
+    const videos = $('#videos');
+    if (videos) io.observe(videos);
   }
 
   /* -------------------------------------------------------------- Boot (React-friendly) */
@@ -623,6 +657,7 @@ import { setupBooking } from './bookDemo.js';
     scope('[data-fee-est]').forEach(feeEst);
     scope('[data-watch]').forEach(watch);
     youtubeVideos();
+    videoTabs(root);
     scope('[data-demo-form]').forEach(demoForm);
     scope('.subnav').forEach(subnav);
     scope('[data-clip]').forEach((el) => Clip(el, CLIPS[el.dataset.clip]));

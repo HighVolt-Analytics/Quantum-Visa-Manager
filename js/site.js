@@ -68,7 +68,7 @@
           <a class="status-dot" href="support.html#status">All systems operational</a></div>
         ${col('Platform', [['Visa Operations', 'visa-operations.html'], ['Correspondence & Tasks', 'platform.html#correspondence'], ['Document & Checklist', 'platform.html#documents'], ['Form Preparation', 'platform.html#forms'], ['Visa Library', 'platform.html#library'], ['AI Control', 'ai-control-security.html']])}
         ${col('Solutions', [['Migration Practices', 'solutions.html#practices'], ['Corporate Sponsorship', 'corporate-sponsorship.html'], ['Practice Growth', 'practice-growth.html'], ['Skills Assessment — soon', 'solutions.html#skills'], ['Interactive Tour', 'how-it-works.html#tour']])}
-        ${col('Company', [['About', 'resources.html#about'], ['Product updates', 'resources.html#updates'], ['Guides', 'resources.html#guides'], ['Pricing', 'pricing.html'], ['Contact', 'support.html#contact'], ['Book a Demo', 'book-demo.html']])}
+        ${col('Company', [['About', 'resources.html#about'], ['Product Videos', 'resources.html#product-videos'], ['Guides', 'resources.html#guides'], ['Pricing', 'pricing.html'], ['Contact', 'support.html#contact'], ['Book a Demo', 'book-demo.html']])}
         ${col('Support & Legal', [['Support', 'support.html'], ['Product status', 'support.html#status'], ['Security', 'ai-control-security.html#security'], ['Data residency', 'ai-control-security.html#residency'], ['Privacy', 'privacy.html'], ['Terms', 'terms.html']])}
       </div>
       <div class="f-ack">
