@@ -8,9 +8,14 @@ or production-gate changes.
 
 ## Decision: reuse the existing notification application
 
-**Appropriate choice:** explicitly approved **extension** of the existing HighVolt deployment-notification
-Entra application already used by Ledgerline (not a second Mail.Send identity), by adding one QVM-scoped
-federated credential.
+> **APPROVAL REQUIRED (shared infrastructure):** Adding a federated credential to the Entra app
+> already used by Ledgerline is a shared-tenant change. Do **not** create or edit that credential,
+> Exchange application access policy, or app permissions until an explicit operator approval is given.
+> Until then, keep `GRAPH_NOTIFY_ENABLED=false`. Ledgerline mail identity and scopes stay untouched.
+
+**Appropriate choice (after approval only):** explicitly approved **extension** of the existing HighVolt
+deployment-notification Entra application already used by Ledgerline (not a second Mail.Send identity),
+by adding one QVM-scoped federated credential.
 
 | Item | Value |
 |------|--------|
