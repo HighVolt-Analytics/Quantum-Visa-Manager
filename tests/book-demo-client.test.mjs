@@ -139,9 +139,10 @@ describe('API responses', () => {
     const calls = []
     const api = createBookingApi({
       baseUrl: 'https://func.example.test/',
+      v2BaseUrl: 'https://func-v2.example.test/',
       fetchImpl: async (url, init) => {
         calls.push({ url, init })
-        if (url.endsWith('/api/bookings')) throw new TypeError('Failed to fetch')
+        if (url.endsWith('/api/bookings') || url.endsWith('/api/v2/bookings')) throw new TypeError('Failed to fetch')
         return new Response(JSON.stringify({ status: 'ok', slots: [] }), { status: 200 })
       },
     })
@@ -153,6 +154,15 @@ describe('API responses', () => {
     assert.equal(calls[1].init.method, 'POST')
     assert.equal(calls[1].init.headers['Content-Type'], 'application/json')
     assert.equal(calls[1].init.credentials, 'omit')
+    assert.deepEqual(await api.availabilityV2('qvm', 'AU', 'Australia/Sydney'), { httpStatus: 200, body: { status: 'ok', slots: [] } })
+    assert.deepEqual(await api.bookV2({ site: 'qvm' }), { network: true })
+    assert.equal(
+      calls[2].url,
+      'https://func-v2.example.test/api/v2/availability?site=qvm&country=AU&timeZone=Australia%2FSydney',
+    )
+    assert.equal(calls[3].url, 'https://func-v2.example.test/api/v2/bookings')
+    assert.equal(calls[3].init.method, 'POST')
+    assert.equal(calls[3].init.credentials, 'omit')
   })
 
   it('stays switched off without a site key or a secure API base', () => {

@@ -90,7 +90,7 @@ QVM keeps its practice state question. The selected country, not that state, cho
 
 ## Frontend gate
 
-Marketing sites call v2 only when `VITE_BOOKING_V2_ENABLED` is exactly `true` at build time. That variable is not set. Otherwise they keep posting to v1 and keep the Sydney calendar.
+Marketing sites call v2 only when `VITE_BOOKING_V2_ENABLED` is exactly `true` at build time. That variable is not set. v2 availability and booking requests use `VITE_BOOKING_V2_API_BASE`; v1 keeps `VITE_BOOKING_API_BASE`. Otherwise they keep posting to v1 and keep the Sydney calendar.
 
 When v2 is on, availability returns `timeZone`, `openWeekdays`, and `horizonDays`. The booking pages label slots and the confirmation in that zone and build the date list from `openWeekdays`, including Saturday when that day is configured.
 

@@ -264,12 +264,16 @@ export function interpretAvailability(httpStatus, body) {
   return { kind: 'error', message: fallback(b.message) }
 }
 
-/** Thin HTTPS client. Network failures and timeouts come back as { network: true }. */
-export function createBookingApi({ baseUrl, fetchImpl = (...a) => fetch(...a), timeoutMs = 20000 }) {
+/** Thin HTTPS client. Network failures and timeouts come back as { network: true }.
+ * v1 paths use baseUrl (VITE_BOOKING_API_BASE). v2 paths use v2BaseUrl (VITE_BOOKING_V2_API_BASE) only.
+ */
+export function createBookingApi({ baseUrl, v2BaseUrl, fetchImpl = (...a) => fetch(...a), timeoutMs = 20000 }) {
   const root = String(baseUrl || '').replace(/\/+$/, '')
-  async function call(path, init) {
+  const v2Root = String(v2BaseUrl || '').replace(/\/+$/, '')
+  async function call(path, init, { v2 = false } = {}) {
+    const origin = v2 ? v2Root : root
     try {
-      const res = await fetchImpl(`${root}${path}`, { ...init, credentials: 'omit', signal: AbortSignal.timeout(timeoutMs) })
+      const res = await fetchImpl(`${origin}${path}`, { ...init, credentials: 'omit', signal: AbortSignal.timeout(timeoutMs) })
       let body = null
       try {
         body = await res.json()
@@ -284,10 +288,11 @@ export function createBookingApi({ baseUrl, fetchImpl = (...a) => fetch(...a), t
   return {
     availability: () => call('/api/availability', { method: 'GET', headers: { Accept: 'application/json' } }),
     availabilityV2: (site, country, timeZone) =>
-      call(`/api/v2/availability?site=${encodeURIComponent(site)}&country=${encodeURIComponent(country)}&timeZone=${encodeURIComponent(timeZone || '')}`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-      }),
+      call(
+        `/api/v2/availability?site=${encodeURIComponent(site)}&country=${encodeURIComponent(country)}&timeZone=${encodeURIComponent(timeZone || '')}`,
+        { method: 'GET', headers: { Accept: 'application/json' } },
+        { v2: true },
+      ),
     book: (payload) =>
       call('/api/bookings', {
         method: 'POST',
@@ -295,11 +300,15 @@ export function createBookingApi({ baseUrl, fetchImpl = (...a) => fetch(...a), t
         body: JSON.stringify(payload),
       }),
     bookV2: (payload) =>
-      call('/api/v2/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload),
-      }),
+      call(
+        '/api/v2/bookings',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        { v2: true },
+      ),
   }
 }
 
