@@ -1,0 +1,122 @@
+name: Booking API v2
+
+# Deploys the booking-api package to the separate v2 Function App only.
+# Targets vars.BOOKING_V2_FUNCTION_APP. Never reads or writes BOOKING_FUNCTION_APP.
+# Does not change app settings, so BOOKING_ENABLED and every BOOKING_V2_ENABLED_* stay as configured in Azure.
+# Independent of booking-api.yml (v1 app) and of the Hostinger website pipeline.
+
+on:
+  pull_request:
+    paths:
+      - 'booking-api/**'
+      - '.github/workflows/booking-api-v2.yml'
+  workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: Type DEPLOY to publish the booking API package to the v2 Function App (does not enable booking)
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: booking-api-v2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Booking API tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: booking-api
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: booking-api/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Validate JavaScript and function registrations
+        run: npm run check
+
+      - name: Unit and mocked-Graph integration tests
+        run: npm test
+
+      - name: Azure Table Storage concurrency tests (Azurite)
+        run: npm run test:integration
+
+  deploy:
+    name: Deploy booking API v2 to Azure
+    needs: [test]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.confirm_deploy == 'DEPLOY'
+    runs-on: ubuntu-latest
+    environment: BookDemo-Production
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: booking-api-v2-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install production dependencies
+        working-directory: booking-api
+        run: npm ci --omit=dev
+
+      - name: Package release
+        working-directory: booking-api
+        run: |
+          set -euo pipefail
+          zip -qr ../booking-api-v2.zip host.json package.json package-lock.json src node_modules
+          sha256sum ../booking-api-v2.zip
+
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Flex Consumption
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.BOOKING_V2_FUNCTION_APP }}
+          package: booking-api-v2.zip
+          sku: flexconsumption
+          remote-build: false
+
+      - name: Report booking state (read-only)
+        env:
+          APP: ${{ vars.BOOKING_V2_FUNCTION_APP }}
+        run: |
+          set -euo pipefail
+          v1=$(curl -s -o /dev/null -w '%{http_code}' "https://${APP}.azurewebsites.net/api/availability")
+          v2=$(curl -s -o /dev/null -w '%{http_code}' "https://${APP}.azurewebsites.net/api/v2/availability?site=hva")
+          {
+            echo "GET /api/availability returned ${v1} (503 means v1 BOOKING_ENABLED is still off)"
+            echo "GET /api/v2/availability?site=hva returned ${v2} (503 means BOOKING_V2_ENABLED_HVA is still off)"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -190,10 +190,10 @@ export class CalendarClient {
     }))
   }
 
-  async findEventsByProperty(bookingId, propertyId = BOOKING_PROPERTY_ID) {
+  async findEventsByProperty(bookingId, propertyId = BOOKING_PROPERTY_ID, select = 'id,isCancelled,onlineMeeting,createdDateTime') {
     if (!/^[0-9a-f-]{36}(-note)?$/.test(bookingId)) throw new Error('Invalid booking id')
     const filter = `singleValueExtendedProperties/Any(ep: ep/id eq '${propertyId}' and ep/value eq '${bookingId}')`
-    const query = `?$filter=${encodeURIComponent(filter)}&$select=id,isCancelled,onlineMeeting,createdDateTime&$top=10`
+    const query = `?$filter=${encodeURIComponent(filter)}&$select=${select}&$top=10`
     const data = await withRetry(() => this.request('GET', `/events${query}`, undefined, 'property_search'), this.retry)
     return (data?.value ?? []).slice().sort((a, b) => String(a.createdDateTime).localeCompare(String(b.createdDateTime)))
   }
