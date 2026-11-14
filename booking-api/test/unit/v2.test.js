@@ -6,7 +6,7 @@ import { BOOKINGS_TABLE, PARTITION } from '../../src/lib/config.js'
 import { slotRowKey } from '../../src/lib/schedule.js'
 import { Ledger } from '../../src/lib/ledger.js'
 import { Reconciler } from '../../src/lib/reconciler.js'
-import { publicWriteGate, readSqlServer, readV2Config, siteStorageSetting, siteTurnstileHostnames, SQL_DATABASES, V2_BOOKINGS_TABLE, V2_ORGANIZER_MAILBOX } from '../../src/lib/v2/config.js'
+import { publicWriteGate, readLegacyTablesAccount, readSqlServer, readV2Config, siteStorageSetting, siteTurnstileHostnames, SQL_DATABASES, V2_BOOKINGS_TABLE, V2_ORGANIZER_MAILBOX } from '../../src/lib/v2/config.js'
 import { SqlSiteStore } from '../../src/lib/v2/sqlStore.js'
 import { getSharedResources, tableCredential } from '../../src/runtime.js'
 import { DefaultAzureCredential, ManagedIdentityCredential } from '@azure/identity'
@@ -616,6 +616,41 @@ test('one unavailable site database does not hide the other sites or legacy QVM 
   assert.equal(report.unavailable.includes('qvm'), true)
   assert.equal(report.bookings.some((row) => row.site === 'agent' && row.source === 'site-form'), true)
   assert.equal(report.bookings.some((row) => row.source === 'legacy-v1' && row.readOnly === true), true)
+  assert.equal(report.legacyUnavailable, false)
+  assert.equal(report.legacyReadError, '')
+})
+
+test('legacy QVM table reads use BOOKING_LEGACY_TABLES_ACCOUNT and report missing or failed reads', async () => {
+  assert.equal(readLegacyTablesAccount('stqvmbookdemoprodaue'), 'stqvmbookdemoprodaue')
+  assert.equal(readLegacyTablesAccount('DefaultEndpointsProtocol=https;AccountName=stqvm;AccountKey=secret'), '')
+  assert.equal(readLegacyTablesAccount('https://stqvm.table.core.windows.net'), '')
+
+  const resources = getSharedResources({
+    BOOKING_SQL_SERVER: 'booking-example.database.windows.net',
+    BOOKING_LEGACY_TABLES_ACCOUNT: 'stqvmbookdemoprodaue',
+  })
+  assert.equal(resources.legacyStore.accountName, 'stqvmbookdemoprodaue')
+  assert.equal(resources.legacyStore.connectionString, '')
+  assert.ok(resources.legacyStore.credential instanceof DefaultAzureCredential)
+  assert.equal(getSharedResources({ BOOKING_SQL_SERVER: 'booking-example.database.windows.net' }).legacyStore, null)
+
+  const { service } = harness()
+  service.stores = { agent: new MemoryTableStore(), hva: new MemoryTableStore(), qvm: new MemoryTableStore(), ledgerline: new MemoryTableStore(), edupass: new MemoryTableStore() }
+  const missing = await service.staffRead({})
+  assert.equal(missing.legacyUnavailable, true)
+  assert.deepEqual(missing.legacyMissing, ['BOOKING_LEGACY_TABLES_ACCOUNT'])
+  assert.equal(missing.legacyReadError, 'missing_setting')
+  assert.equal(missing.bookings.some((row) => row.source === 'legacy-v1'), false)
+
+  service.legacyStore = {
+    async *list() {
+      throw Object.assign(new Error('denied'), { code: 'Forbidden' })
+    },
+  }
+  const failed = await service.staffRead({})
+  assert.equal(failed.legacyUnavailable, true)
+  assert.equal(failed.legacyReadError, 'unavailable')
+  assert.deepEqual(failed.legacyMissing, [])
 })
 
 test('the function app uses managed identity and local development uses DefaultAzureCredential', () => {

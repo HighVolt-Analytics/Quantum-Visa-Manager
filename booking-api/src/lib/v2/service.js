@@ -21,7 +21,8 @@ export class V2BookingService {
   constructor({ store, stores, legacyStore, calendar, mail, cfg, verifyTurnstile, log, now = () => new Date() }) {
     this.store = store
     this.stores = stores || null
-    this.legacyStore = legacyStore || store
+    // Legacy QVM rows use a dedicated Table account. Do not fall back to host storage.
+    this.legacyStore = legacyStore || null
     this.calendar = calendar
     this.mail = mail
     this.cfg = cfg
@@ -438,7 +439,8 @@ export class V2BookingService {
 
   /**
    * Reads each site database separately. A database that cannot be read is marked
-   * unavailable and the other sites are still returned. Legacy QVM rows are read only.
+   * unavailable and the other sites are still returned. Legacy QVM rows are read only
+   * from BOOKING_LEGACY_TABLES_ACCOUNT; missing config or read failure is reported.
    */
   async staffRead({ date, site, assignee }) {
     const bookings = []
@@ -462,32 +464,42 @@ export class V2BookingService {
       }
     }
     let legacyUnavailable = false
-    if ((!site || site === 'qvm') && this.legacyStore) {
-      try {
-        for await (const row of this.legacyStore.list(BOOKINGS_TABLE, PARTITION, 'bkg_', 'bkg`')) {
-          if (date && row.slotStart && !String(row.slotStart).startsWith(date)) continue
-          if (assignee && assignee !== 'arup') continue
-          bookings.push({
-            bookingId: row.bookingId,
-            site: 'qvm',
-            source: 'legacy-v1',
-            readOnly: true,
-            reference: row.reference || '',
-            slotStart: row.slotStart || '',
-            state: row.state || '',
-            market: 'unknown',
-            answersPresent: Boolean(row.answers),
-            meetingStatus: row.eventId ? 'created' : 'unknown',
-            invitees: [],
-            notifications: {},
-          })
-        }
-      } catch (err) {
+    let legacyMissing = []
+    let legacyReadError = ''
+    if (!site || site === 'qvm') {
+      if (!this.legacyStore) {
         legacyUnavailable = true
-        this.log.warn('v2_legacy_read_failed', { code: err?.code || 'unavailable' })
+        legacyMissing = ['BOOKING_LEGACY_TABLES_ACCOUNT']
+        legacyReadError = 'missing_setting'
+        this.log.warn('v2_legacy_read_skipped', { code: 'missing_setting' })
+      } else {
+        try {
+          for await (const row of this.legacyStore.list(BOOKINGS_TABLE, PARTITION, 'bkg_', 'bkg`')) {
+            if (date && row.slotStart && !String(row.slotStart).startsWith(date)) continue
+            if (assignee && assignee !== 'arup') continue
+            bookings.push({
+              bookingId: row.bookingId,
+              site: 'qvm',
+              source: 'legacy-v1',
+              readOnly: true,
+              reference: row.reference || '',
+              slotStart: row.slotStart || '',
+              state: row.state || '',
+              market: 'unknown',
+              answersPresent: Boolean(row.answers),
+              meetingStatus: row.eventId ? 'created' : 'unknown',
+              invitees: [],
+              notifications: {},
+            })
+          }
+        } catch (err) {
+          legacyUnavailable = true
+          legacyReadError = 'unavailable'
+          this.log.warn('v2_legacy_read_failed', { code: err?.code || 'unavailable' })
+        }
       }
     }
-    return { bookings, unavailable, legacyUnavailable }
+    return { bookings, unavailable, legacyUnavailable, legacyMissing, legacyReadError }
   }
 
   async staffDetail(site, bookingId) {

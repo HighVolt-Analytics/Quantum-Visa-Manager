@@ -6,6 +6,10 @@ name: Booking API v2
 # Independent of booking-api.yml (v1 app) and of the Hostinger website pipeline.
 
 on:
+  pull_request:
+    paths:
+      - 'booking-api/**'
+      - '.github/workflows/booking-api-v2.yml'
   workflow_dispatch:
     inputs:
       confirm_deploy:

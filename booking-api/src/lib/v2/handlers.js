@@ -120,7 +120,7 @@ function serviceFrom(resources, env, log) {
     service: new V2BookingService({
       store: resources.store,
       stores: resources.stores,
-      legacyStore: resources.store,
+      legacyStore: resources.legacyStore || null,
       calendar: graph,
       mail: graph,
       cfg,
@@ -215,15 +215,28 @@ export function makeV2StaffHandler(getResources, env = () => process.env) {
       const sites = catalog(cfg).map((site) => {
         const failed = report.unavailable.includes(site.id)
         const rows = report.bookings.filter((row) => row.site === site.id)
+        const legacyReadError = site.id === 'qvm' ? (report.legacyReadError || '') : ''
         return {
           ...site,
           bookings: failed ? rows.filter((row) => row.source === 'legacy-v1') : rows,
           readError: failed ? 'unavailable' : '',
+          legacyReadError,
         }
       })
       const missing = sqlConfigured ? [] : ['BOOKING_SQL_SERVER']
-      const status = report.unavailable.length ? 'partial' : (missing.length && !report.bookings.length ? 'unconfigured' : 'ok')
-      return json(200, { status, missing, sites, legacyReadOnly: true })
+      const legacyMissing = report.legacyMissing || []
+      const status = (report.unavailable.length || report.legacyUnavailable)
+        ? 'partial'
+        : (missing.length && !report.bookings.length ? 'unconfigured' : 'ok')
+      return json(200, {
+        status,
+        missing,
+        legacyMissing,
+        legacyReadError: report.legacyReadError || '',
+        legacyUnavailable: Boolean(report.legacyUnavailable),
+        sites,
+        legacyReadOnly: true,
+      })
     } catch (err) {
       log.error('v2_staff_error', { code: errorCode(err) })
       return json(500, { status: 'error' })

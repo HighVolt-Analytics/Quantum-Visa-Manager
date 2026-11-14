@@ -2,7 +2,7 @@ import { DefaultAzureCredential, ManagedIdentityCredential } from '@azure/identi
 import { rawGraphCaller } from './functions/diagnostics.js'
 import { missingBookingSettings, readConfig } from './lib/config.js'
 import { SITES } from './lib/v2/roster.js'
-import { readSqlServer, SQL_DATABASES } from './lib/v2/config.js'
+import { readLegacyTablesAccount, readSqlServer, SQL_DATABASES } from './lib/v2/config.js'
 import { SqlSiteStore } from './lib/v2/sqlStore.js'
 import { BookingService, createAvailabilityCache } from './lib/bookingService.js'
 import { CalendarClient, managedIdentityTokenProvider } from './lib/graph.js'
@@ -95,20 +95,35 @@ function siteStores(env) {
   return stores
 }
 
-/** Shared table store and the existing v1 calendar client. Does not create events. */
+/**
+ * Read-only client for the existing v1 QVM bookings table account.
+ * Uses the Function managed identity. Never reads a storage key or connection string.
+ * Host/deployment storage stays on AzureWebJobsStorage__accountName.
+ */
+function legacyTableStore(env) {
+  const accountName = readLegacyTablesAccount(env.BOOKING_LEGACY_TABLES_ACCOUNT)
+  if (!accountName) return null
+  return new AzureTableStore({
+    accountName,
+    credential: tableCredential(env),
+  })
+}
+
+/** Shared SQL stores, optional host table store, and separate legacy QVM table client. Does not create events. */
 export function getSharedResources(env = process.env) {
   const cfg = readConfig(env)
   const stores = siteStores(env)
   const anySite = Object.values(stores).some(Boolean)
+  const legacyStore = legacyTableStore(env)
   const storageConfigured = Boolean(cfg.tablesConnectionString || (cfg.storageAccount && cfg.clientId))
-  if (!storageConfigured && !anySite) {
-    return { storageConfigured: false, store: null, stores, getToken: null, calendar: null }
+  if (!storageConfigured && !anySite && !legacyStore) {
+    return { storageConfigured: false, store: null, stores, legacyStore: null, getToken: null, calendar: null }
   }
   if (!storageConfigured) {
-    return { storageConfigured: true, store: null, stores, getToken: null, calendar: null }
+    return { storageConfigured: true, store: null, stores, legacyStore, getToken: null, calendar: null }
   }
   const i = (infra ??= buildInfra(cfg))
-  return { storageConfigured: true, store: i.store, stores, getToken: i.getToken, calendar: i.calendar }
+  return { storageConfigured: true, store: i.store, stores, legacyStore, getToken: i.getToken, calendar: i.calendar }
 }
 
 export function getDiagnosticsDeps(env = process.env) {

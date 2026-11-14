@@ -44,6 +44,8 @@ The Function identity needs a user in each of the five databases, with **db_data
 
 QVM v1 stays on its existing Table Storage account, table `bookings`, partition `demo`. v2 does not write those rows. The portal shows them read-only.
 
+Host and deployment storage for the v2 Function App stay on `AzureWebJobsStorage__accountName` (the dedicated v2 account). Legacy QVM table reads use a separate setting, `BOOKING_LEGACY_TABLES_ACCOUNT`, with the Function app's managed identity. No storage key or connection string is used. If that setting is missing or the read fails, `GET /api/v2/staff/bookings` reports `legacyReadError` / `legacyMissing` instead of silently returning an empty legacy list.
+
 The same person may be booked at the same time on two sites. Staff and the manager resolve that overlap. A second different submission for an overlapping time on the same site is rejected. The same idempotency key and body replay the stored booking and do not create another meeting or staff email.
 
 Hours are 9:00 am–7:00 pm every day in the visitor's confirmed IANA timezone. The country chooses the roster only. `BOOKING_SLOT_MINUTES`, `BOOKING_NOTICE_MINUTES`, and `BOOKING_HORIZON_DAYS` have no default. Until they are set, availability stays unconfigured.
@@ -68,6 +70,8 @@ Assignee addresses, appointment length, notice, horizon, storage accounts, and G
 - `BOOKING_ASSIGNEE_KHUSHI_EMAIL`
 - `BOOKING_SQL_SERVER` (hostname only; databases `HVA`, `Agent`, `QVM`, `Ledgerline`, `EduPass`)
 - db_datareader and db_datawriter for the Function identity in each of those databases
+- `BOOKING_LEGACY_TABLES_ACCOUNT` (existing v1 QVM Table Storage account name only) for the portal's read-only legacy QVM list
+- Storage Table Data Reader on that v1 account for the v2 Function managed identity (`id-bookings-v2-func-prod`)
 - `Bookings.Read.All` application permission for the read-only Microsoft Bookings list. Do not add a Bookings write permission.
 - `BOOKING_SLOT_MINUTES`
 - `BOOKING_NOTICE_MINUTES`

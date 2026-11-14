@@ -32,6 +32,18 @@ export function readSqlServer(value) {
   return raw
 }
 
+/**
+ * Storage account name for read-only legacy QVM Table Storage rows.
+ * A connection string, account key, or URL is rejected.
+ * Host storage stays on AzureWebJobsStorage__accountName; this is separate.
+ */
+export function readLegacyTablesAccount(value) {
+  const raw = String(value || '').trim().toLowerCase()
+  if (!raw || /password=|pwd=|accountkey=|sharedaccesssignature=|;|:|\/|@|\s/.test(raw)) return ''
+  if (!/^[a-z0-9]{3,24}$/.test(raw)) return ''
+  return raw
+}
+
 function list(value) {
   if (!value) return []
   return String(value).split(',').map((item) => item.trim()).filter(Boolean)
