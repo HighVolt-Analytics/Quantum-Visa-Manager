@@ -1,5 +1,5 @@
 import { GraphError } from '../graph.js'
-import { clientIp, json, originAllowed } from '../http.js'
+import { clientIp, corsPreflight, json, originAllowed, withAllowedOriginCors } from '../http.js'
 import { createLogger, errorCode } from '../log.js'
 import { NOTE_PROPERTY_ID, readConfig } from '../config.js'
 import { verifyTurnstile } from '../turnstile.js'
@@ -146,29 +146,44 @@ export function catalog(cfg) {
   }))
 }
 
+function siteOrigins(cfg, site) {
+  return cfg.sites?.[site]?.origins || []
+}
+
+/** CORS only when Origin is on that site's allowlist. Never wildcard; never attach internal error text. */
+function v2PublicReply(response, origin, allowedOrigins) {
+  return withAllowedOriginCors(response, origin, allowedOrigins)
+}
+
 export function makeV2AvailabilityHandler(getResources, env = () => process.env) {
   return async (request, context) => {
     const log = createLogger(context)
+    const origin = request.headers.get('origin') || ''
+    const url = new URL(request.url)
+    const site = url.searchParams.get('site') || ''
+    const current = env()
+    const cfg = readV2Config(current)
+    const allowed = siteOrigins(cfg, site)
+    if (String(request.method || '').toUpperCase() === 'OPTIONS') {
+      return corsPreflight(origin, allowed)
+    }
     try {
-      const url = new URL(request.url)
-      const site = url.searchParams.get('site') || ''
       const country = url.searchParams.get('country') || ''
       const timeZone = url.searchParams.get('timeZone') || ''
-      const current = env()
-      const cfg = readV2Config(current)
-      const gate = publicWriteGate(cfg, site, request.headers.get('origin'))
+      const gate = publicWriteGate(cfg, site, origin)
       if (!gate.ok) return json(gate.httpStatus, gate.body)
+      const respond = (status, body) => v2PublicReply(json(status, body), origin, allowed)
       const derived = deriveMarket(site, { country })
-      if (!derived.ok) return json(400, { status: 'invalid', fields: ['country'] })
-      if (!isValidTimeZone(timeZone)) return json(400, { status: 'invalid', fields: ['timeZone'] })
+      if (!derived.ok) return respond(400, { status: 'invalid', fields: ['country'] })
+      if (!isValidTimeZone(timeZone)) return respond(400, { status: 'invalid', fields: ['timeZone'] })
       const market = derived.market
       const resources = getResources()
       const { service } = serviceFrom(resources, current, log)
       const result = await service.availability({ site, market, timeZone, ip: clientIp(request) })
-      return json(result.httpStatus, result.body)
+      return respond(result.httpStatus, result.body)
     } catch (err) {
-      log.error('v2_availability_error', { code: errorCode(err) })
-      return json(500, { status: 'error' })
+      log.error('v2_availability_error', { code: errorCode(err), site })
+      return v2PublicReply(json(500, { status: 'error' }), origin, allowed)
     }
   }
 }
@@ -176,21 +191,32 @@ export function makeV2AvailabilityHandler(getResources, env = () => process.env)
 export function makeV2BookingsHandler(getResources, env = () => process.env) {
   return async (request, context) => {
     const log = createLogger(context)
+    const origin = request.headers.get('origin') || ''
+    const current = env()
+    const cfg = readV2Config(current)
+    if (String(request.method || '').toUpperCase() === 'OPTIONS') {
+      // Site is unknown until the JSON body is read; allow preflight only when Origin matches a configured site.
+      const matched = SITES.find((id) => siteOrigins(cfg, id).includes(origin))
+      return corsPreflight(origin, matched ? siteOrigins(cfg, matched) : [])
+    }
     try {
-      const current = env()
-      const cfg = readV2Config(current)
       let body
       try { body = await request.json() } catch { return json(400, { status: 'invalid', fields: ['body'] }) }
-      const gate = publicWriteGate(cfg, body?.site, request.headers.get('origin'))
+      const site = body?.site || ''
+      const allowed = siteOrigins(cfg, site)
+      const gate = publicWriteGate(cfg, site, origin)
       if (!gate.ok) return json(gate.httpStatus, gate.body)
-      if (!originAllowed(request, cfg.sites[body.site].origins)) return json(403, { status: 'forbidden' })
+      if (!originAllowed(request, allowed)) return json(403, { status: 'forbidden' })
+      const respond = (status, bodyJson) => v2PublicReply(json(status, bodyJson), origin, allowed)
       const resources = getResources()
       const { service } = serviceFrom(resources, current, log)
-      const result = await service.create({ body, origin: request.headers.get('origin'), ip: clientIp(request) })
-      return json(result.httpStatus, result.body)
+      const result = await service.create({ body, origin, ip: clientIp(request) })
+      return respond(result.httpStatus, result.body)
     } catch (err) {
       log.error('v2_booking_error', { code: errorCode(err) })
-      return json(500, { status: 'error' })
+      // Origin may be allowed for a site even when create throws; echo CORS only if it matches a site list.
+      const matched = SITES.find((id) => siteOrigins(cfg, id).includes(origin))
+      return v2PublicReply(json(500, { status: 'error' }), origin, matched ? siteOrigins(cfg, matched) : [])
     }
   }
 }

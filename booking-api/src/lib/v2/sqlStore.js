@@ -44,6 +44,16 @@ export class SqlSiteStore {
     this.credential = credential
     this.execute = execute
     this.connected = false
+    this.pool = null
+    this.poolToken = null
+  }
+
+  async resetPool() {
+    const pool = this.pool
+    this.pool = null
+    this.poolToken = null
+    this.connected = false
+    if (pool) await pool.close().catch(() => {})
   }
 
   async get(table, partitionKey, rowKey) {
@@ -104,7 +114,8 @@ export class SqlSiteStore {
     }
   }
 
-  async runMssql(batch) {
+  async ensurePool() {
+    if (this.pool?.connected) return this.pool
     const credential = this.credential
     const token = credential ? await credential.getToken('https://database.windows.net/.default') : null
     if (!token?.token) {
@@ -116,16 +127,26 @@ export class SqlSiteStore {
     const pool = new sql.ConnectionPool({
       server: this.server,
       database: this.database,
+      connectionTimeout: 5000,
+      requestTimeout: 8000,
       options: { encrypt: true, trustServerCertificate: false },
       authentication: {
         type: 'azure-active-directory-access-token',
         options: { token: token.token },
       },
     })
-    this.connected = true
     await pool.connect()
+    this.pool = pool
+    this.poolToken = token.token
+    this.connected = true
+    return pool
+  }
+
+  async runMssql(batch) {
     try {
+      const pool = await this.ensurePool()
       if (!batch.transaction) return await executeStatement(pool, batch.statements[0])
+      const sql = (await import('mssql')).default
       const tx = new sql.Transaction(pool)
       await tx.begin()
       try {
@@ -137,8 +158,15 @@ export class SqlSiteStore {
         await tx.rollback().catch(() => {})
         throw err
       }
-    } finally {
-      await pool.close()
+    } catch (err) {
+      await this.resetPool()
+      if (err?.code === 'sql_unavailable') throw err
+      if (err?.name === 'ConnectionError' || err?.code === 'ETIMEOUT' || err?.number === -2) {
+        const wrapped = new Error('sql_unavailable')
+        wrapped.code = 'sql_unavailable'
+        throw wrapped
+      }
+      throw err
     }
   }
 

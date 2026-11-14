@@ -30,3 +30,27 @@ export function originAllowed(request, allowedOrigins) {
   const origin = request.headers.get('origin')
   return Boolean(origin) && allowedOrigins.includes(origin)
 }
+
+/**
+ * Echo a single allowed Origin onto a response. Never uses *.
+ * Call only after the Origin is confirmed to be in that site's allowlist.
+ */
+export function withAllowedOriginCors(response, origin, allowedOrigins) {
+  if (!origin || !Array.isArray(allowedOrigins) || !allowedOrigins.includes(origin)) return response
+  return {
+    ...response,
+    headers: {
+      ...(response.headers || {}),
+      'Access-Control-Allow-Origin': origin,
+      Vary: 'Origin',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  }
+}
+
+/** Preflight response for an allowed Origin. Empty body; no internal details. */
+export function corsPreflight(origin, allowedOrigins) {
+  const base = { status: 204, headers: { ...BASE_HEADERS } }
+  return withAllowedOriginCors(base, origin, allowedOrigins)
+}
