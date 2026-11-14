@@ -11,11 +11,16 @@ import { MAIL, initialNotify, mailAction, staffMailBody, summarizeNotify } from 
 import { withEmails, recipientsFor } from './roster.js'
 import { candidateSlots, findSlot, slotLabel, visitorSchedule } from './schedule.js'
 import { validateV2Booking } from './validation.js'
+import { errorCode } from '../log.js'
 
 const V2_PROPERTY_ID = 'String {6c1a9e40-2b7d-4f5a-8c31-9d0e4a7b2c18} Name HvBookingV2Id'
 const V2_SITES = ['hva', 'agent', 'qvm', 'ledgerline', 'edupass']
 
 const reply = (httpStatus, body) => ({ httpStatus, body })
+
+function elapsedMs(started) {
+  return Math.max(0, Date.now() - started)
+}
 
 export class V2BookingService {
   constructor({ store, stores, legacyStore, calendar, mail, cfg, verifyTurnstile, log, now = () => new Date() }) {
@@ -61,31 +66,95 @@ export class V2BookingService {
     return !allowed
   }
 
+  /**
+   * One bounded list of active site-slot holds for this site, keyed by slot row key.
+   * Availability filters candidates in memory against this set instead of one SQL get per slot.
+   */
+  async activeSlotHoldKeys(site) {
+    const store = this.siteStore(site)
+    const nowMs = this.now().getTime()
+    const busy = new Set()
+    if (!store) return busy
+    for await (const row of store.list(V2_BOOKINGS_TABLE, site, 'slot_', 'slot`')) {
+      if (row.kind !== 'site-slot') continue
+      if (Date.parse(row.expiresAt || 0) <= nowMs) continue
+      busy.add(row.rowKey)
+    }
+    return busy
+  }
+
+  slotHeldInSet(slot, holdKeys) {
+    return timeSlices(slot.start, slot.end).some((slice) => holdKeys.has(slotRowKey(slice)))
+  }
+
   async availability({ site, market, timeZone, ip }) {
+    const started = Date.now()
     const store = this.siteStore(site)
     if (!store) return reply(503, { status: 'unconfigured', missing: [siteStorageSetting(site)] })
-    if (await this.rateLimited(site, 'availability', ip || 'unknown')) {
-      return reply(429, { status: 'rate_limited', message: 'Too many requests. Please try again shortly.' })
+    try {
+      const rateStarted = Date.now()
+      if (await this.rateLimited(site, 'availability', ip || 'unknown')) {
+        this.log.info('v2_availability_stage', { site, stage: 'rate_limit', durationMs: elapsedMs(rateStarted), status: 'limited' })
+        return reply(429, { status: 'rate_limited', message: 'Too many requests. Please try again shortly.' })
+      }
+      this.log.info('v2_availability_stage', { site, stage: 'rate_limit', durationMs: elapsedMs(rateStarted) })
+
+      const schedule = visitorSchedule(this.cfg.visit, timeZone)
+      if (!schedule.configured) return reply(503, { status: 'unconfigured', missing: schedule.missing })
+      const emailed = withEmails(recipientsFor(site, market), this.cfg.emails)
+      if (!emailed.ok) return reply(503, { status: 'unconfigured', missing: emailed.missing })
+
+      const holdStarted = Date.now()
+      const holdKeys = await this.activeSlotHoldKeys(site)
+      this.log.info('v2_availability_stage', {
+        site,
+        stage: 'slot_holds',
+        durationMs: elapsedMs(holdStarted),
+        count: holdKeys.size,
+      })
+
+      const filterStarted = Date.now()
+      const open = []
+      for (const slot of candidateSlots(schedule, this.now())) {
+        if (this.slotHeldInSet(slot, holdKeys)) continue
+        open.push({
+          start: slot.start,
+          end: slot.end,
+          date: slot.date,
+          time: slot.time,
+          endTime: slot.endTime,
+          timeZone: slot.timeZone,
+        })
+      }
+      this.log.info('v2_availability_stage', {
+        site,
+        stage: 'filter_slots',
+        durationMs: elapsedMs(filterStarted),
+        count: open.length,
+      })
+      this.log.info('v2_availability_stage', { site, stage: 'complete', durationMs: elapsedMs(started), count: open.length })
+      return reply(200, {
+        status: 'ok',
+        site,
+        market,
+        timeZone: schedule.timeZone,
+        openWeekdays: schedule.openWeekdays,
+        horizonDays: schedule.horizonDays,
+        slotMinutes: schedule.slotMinutes,
+        slots: open,
+      })
+    } catch (err) {
+      this.log.error('v2_availability_error', {
+        site,
+        stage: 'availability',
+        code: errorCode(err),
+        durationMs: elapsedMs(started),
+      })
+      if (err?.code === 'sql_unavailable') {
+        return reply(503, { status: 'unconfigured', missing: [siteStorageSetting(site)] })
+      }
+      throw err
     }
-    const schedule = visitorSchedule(this.cfg.visit, timeZone)
-    if (!schedule.configured) return reply(503, { status: 'unconfigured', missing: schedule.missing })
-    const emailed = withEmails(recipientsFor(site, market), this.cfg.emails)
-    if (!emailed.ok) return reply(503, { status: 'unconfigured', missing: emailed.missing })
-    const open = []
-    for (const slot of candidateSlots(schedule, this.now())) {
-      if (await this.slotBusy(site, slot)) continue
-      open.push({ start: slot.start, end: slot.end, date: slot.date, time: slot.time, endTime: slot.endTime, timeZone: slot.timeZone })
-    }
-    return reply(200, {
-      status: 'ok',
-      site,
-      market,
-      timeZone: schedule.timeZone,
-      openWeekdays: schedule.openWeekdays,
-      horizonDays: schedule.horizonDays,
-      slotMinutes: schedule.slotMinutes,
-      slots: open,
-    })
   }
 
   async create({ body, ip }) {

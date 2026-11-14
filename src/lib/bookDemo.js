@@ -15,7 +15,9 @@ import {
   isBookingV2Enabled,
   BOOKING_V2_SITE,
   countryOptions,
-  timeZoneOptions,
+  detectTimeZone,
+  regionsForCountry,
+  timeZoneChoices,
   localEquivalent,
   sydneyZoneLabel,
   zoneLabel,
@@ -54,34 +56,139 @@ function el(tag, attrs = {}, ...children) {
   return node
 }
 
+function syncRegionField(form, countryCode) {
+  const field = form.querySelector('[data-region-field]') || form.querySelector('[name="state"]')?.closest('.field')
+  if (!field) return
+  field.dataset.regionField = 'true'
+  const previous = String(form.querySelector('[name="state"]')?.value || '').trim()
+  const regions = regionsForCountry(countryCode)
+  const label = field.querySelector('label')
+  if (label) {
+    label.htmlFor = 'state'
+    label.textContent = 'State / province / region'
+  }
+  const control = regions
+    ? el(
+        'select',
+        { className: 'select', id: 'state', name: 'state', required: true },
+        el('option', { value: '' }, 'Select a region'),
+        ...regions.map((name) => el('option', { value: name, selected: name === previous }, name)),
+      )
+    : el('input', {
+        className: 'input',
+        id: 'state',
+        name: 'state',
+        autocomplete: 'address-level1',
+        required: true,
+        value: regionsForCountry('AU')?.includes(previous) ? '' : previous,
+        placeholder: 'State, province or region',
+      })
+  const existing = field.querySelector('#state, [name="state"]')
+  if (existing) existing.replaceWith(control)
+  else field.append(control)
+  let err = field.querySelector('.err')
+  if (!err) {
+    err = el('span', { className: 'err' }, 'Please enter your state, province or region.')
+    field.append(err)
+  } else {
+    err.textContent = 'Please enter your state, province or region.'
+  }
+}
+
 function ensureCountryField(form) {
   if (form.querySelector('[name="country"]')) return
   const stateField = form.querySelector('[name="state"]')?.closest('.field')
   if (!stateField) return
-  const select = el('select', { className: 'select', id: 'country', name: 'country', autocomplete: 'country', required: true }, el('option', { value: '' }, 'Select a country'))
-  for (const item of countryOptions()) select.append(el('option', { value: item.code }, item.name))
+  const countries = countryOptions()
+  const hidden = el('input', { type: 'hidden', id: 'country', name: 'country', required: true, value: '' })
+  const search = el('input', {
+    className: 'input',
+    id: 'country-search',
+    type: 'search',
+    autocomplete: 'off',
+    role: 'combobox',
+    'aria-autocomplete': 'list',
+    'aria-expanded': 'false',
+    'aria-controls': 'country-list',
+    placeholder: 'Search for a country',
+  })
+  const list = el('ul', { className: 'country-list', id: 'country-list', role: 'listbox', hidden: true })
   const field = el(
     'div',
-    { className: 'field' },
-    el('label', { for: 'country' }, 'Country'),
-    select,
+    { className: 'field', 'data-country-field': 'true' },
+    el('label', { for: 'country-search' }, 'Country'),
+    hidden,
+    search,
+    list,
     el('span', { className: 'err' }, 'Please select your country.'),
   )
   stateField.before(field)
+
+  function closeList() {
+    list.hidden = true
+    search.setAttribute('aria-expanded', 'false')
+  }
+
+  function renderList(query) {
+    const q = String(query || '').trim().toLowerCase()
+    list.replaceChildren()
+    const matches = countries.filter((item) => !q || item.name.toLowerCase().includes(q) || item.code.toLowerCase() === q).slice(0, 12)
+    for (const item of matches) {
+      const option = el('li', { role: 'option', 'data-code': item.code, tabIndex: -1 }, item.name)
+      option.addEventListener('mousedown', (event) => {
+        event.preventDefault()
+        hidden.value = item.code
+        search.value = item.name
+        closeList()
+        syncRegionField(form, item.code)
+      })
+      list.append(option)
+    }
+    list.hidden = matches.length === 0
+    search.setAttribute('aria-expanded', matches.length ? 'true' : 'false')
+  }
+
+  search.addEventListener('focus', () => renderList(search.value))
+  search.addEventListener('input', () => {
+    hidden.value = ''
+    renderList(search.value)
+  })
+  search.addEventListener('blur', () => {
+    window.setTimeout(() => {
+      closeList()
+      if (!hidden.value) search.value = ''
+    }, 150)
+  })
+  syncRegionField(form, '')
 }
 
 function ensureTimeZoneField(form) {
   if (form.querySelector('[name="timeZone"]')) return
   const stateField = form.querySelector('[name="state"]')?.closest('.field')
   if (!stateField) return
-  const select = el('select', { className: 'select', id: 'timeZone', name: 'timeZone', required: true }, el('option', { value: '' }, 'Select your timezone'))
-  for (const zone of timeZoneOptions()) select.append(el('option', { value: zone }, zone))
+  const detected = detectTimeZone()
+  const hidden = el('input', { type: 'hidden', id: 'timeZone', name: 'timeZone', value: detected, required: true })
+  const summary = el('p', { className: 'hint', 'data-timezone-label': 'true' }, `Using ${detected}`)
+  const toggle = el('button', { type: 'button', className: 'link-btn', 'data-timezone-change': 'true' }, 'Change timezone')
+  const select = el('select', { className: 'select', id: 'timeZone-select', hidden: true })
+  for (const zone of timeZoneChoices(detected)) select.append(el('option', { value: zone, selected: zone === detected }, zone))
+  select.addEventListener('change', () => {
+    hidden.value = select.value
+    summary.textContent = `Using ${select.value}`
+  })
+  toggle.addEventListener('click', () => {
+    select.hidden = !select.hidden
+    toggle.textContent = select.hidden ? 'Change timezone' : 'Hide timezone list'
+  })
   const field = el(
     'div',
-    { className: 'field' },
-    el('label', { for: 'timeZone' }, 'Timezone'),
+    { className: 'field', 'data-timezone-field': 'true' },
+    el('span', { className: 'label' }, 'Timezone'),
+    hidden,
+    summary,
+    el('p', { className: 'hint' }, 'Times are 9:00 am–7:00 pm in this timezone, every day.'),
+    toggle,
     select,
-    el('span', { className: 'err' }, 'Please select your timezone. Times are 9:00 am–7:00 pm in that zone, every day.'),
   )
   stateField.before(field)
 }

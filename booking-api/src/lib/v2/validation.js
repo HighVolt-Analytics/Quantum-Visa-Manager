@@ -69,7 +69,7 @@ export function validateV2Booking(body) {
     email: check('email', text(a.email, { required: true, max: 254 })),
     phone: check('phone', text(a.phone, { required: false, max: 32 })),
     org: check('org', text(a.org, { required: true, max: 120 })),
-    state: check('state', site === 'qvm' ? choice(a.state, OPTIONS.state) : text(a.state, { required: false, max: 80 })),
+    state: '',
     country: '',
     countryCode: '',
     partner: a.partner === true,
@@ -80,6 +80,14 @@ export function validateV2Booking(body) {
   else {
     answers.country = country.name
     answers.countryCode = country.code
+  }
+  if (site === 'qvm') {
+    // Australia keeps the existing territory list; other countries send a free-text region.
+    answers.state = country?.code === 'AU'
+      ? check('state', choice(a.state, OPTIONS.state))
+      : check('state', text(a.state, { required: true, max: 80 }))
+  } else {
+    answers.state = check('state', text(a.state, { required: false, max: 80 }))
   }
   if (answers.email && !EMAIL.test(answers.email)) errors.push('email')
   if (answers.phone && !PHONE.test(answers.phone)) errors.push('phone')

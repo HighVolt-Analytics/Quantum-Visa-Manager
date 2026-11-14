@@ -3,10 +3,12 @@ import { readFile } from 'node:fs/promises'
 import { describe, it } from 'node:test'
 import {
   CONTACT,
+  COMMON_TIME_ZONES,
   buildBookingPayload,
   buildDateOptions,
   confirmationDetails,
   createBookingApi,
+  detectTimeZone,
   formatSydneyTime,
   idempotencyKeyFor,
   interpretAvailability,
@@ -14,7 +16,9 @@ import {
   isBookingConfigured,
   localAppointment,
   localEquivalent,
+  regionsForCountry,
   sydneyZoneLabel,
+  timeZoneChoices,
   withBookingContact,
 } from '../src/lib/bookingClient.js'
 
@@ -181,6 +185,17 @@ describe('Book a Demo page markup', async () => {
     for (const name of ['name="size"', 'name="system"', 'name="systemName"', 'name="bottleneck"', 'name="first"', 'name="last"', 'name="email"', 'name="phone"', 'name="org"', 'name="state"', 'name="consent"']) assert.ok(html.includes(name), name)
     assert.equal(html.includes('name="country"'), false)
     assert.equal(html.includes('name="timeZone"'), false)
+    assert.match(html, /State \/ province \/ region/)
+  })
+
+  it('exposes curated regions and a short timezone chooser without dumping every IANA zone', () => {
+    assert.deepEqual(regionsForCountry('AU')?.slice(0, 3), ['NSW', 'VIC', 'QLD'])
+    assert.ok(regionsForCountry('IN')?.includes('Maharashtra'))
+    assert.equal(regionsForCountry('ZZ'), null)
+    assert.ok(COMMON_TIME_ZONES.includes('Australia/Sydney'))
+    assert.ok(timeZoneChoices('Asia/Kolkata')[0] === 'Asia/Kolkata')
+    assert.ok(timeZoneChoices('Asia/Kolkata').length < 40)
+    assert.equal(typeof detectTimeZone(), 'string')
   })
 
   it('hides the time step until the questions are valid and masks the panel from Clarity', () => {

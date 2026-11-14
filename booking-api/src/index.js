@@ -39,14 +39,14 @@ app.timer('reconcile', {
 const resources = () => getSharedResources()
 
 app.http('v2Availability', {
-  methods: ['GET'],
+  methods: ['GET', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'v2/availability',
   handler: makeV2AvailabilityHandler(resources),
 })
 
 app.http('v2Bookings', {
-  methods: ['POST'],
+  methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'v2/bookings',
   handler: makeV2BookingsHandler(resources),

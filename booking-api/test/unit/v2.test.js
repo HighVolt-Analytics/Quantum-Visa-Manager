@@ -721,3 +721,97 @@ test('expired mail claims are not sent again', () => {
   assert.equal(mailAction({ status: MAIL.CLAIMED, claimedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString() }, Date.now()), 'expire')
   assert.equal(mailAction({ status: MAIL.FAILED, attempts: 1 }, Date.now()), 'send')
 })
+
+test('qvm state accepts non-AU regions as text while AU stays on the territory list', () => {
+  const india = validateV2Booking({
+    site: 'qvm',
+    idempotencyKey: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    slotStart: slot.start,
+    timeZone: 'Asia/Kolkata',
+    turnstileToken: 'token',
+    answers: {
+      size: 'Sole agent',
+      system: 'Spreadsheets, email and shared drives',
+      bottleneck: 'after-hours enquiries',
+      first: 'Ada',
+      last: 'Lovelace',
+      email: 'ada@example.test',
+      org: 'Practice Co',
+      state: 'Maharashtra',
+      country: 'IN',
+      consent: true,
+    },
+  })
+  assert.equal(india.ok, true)
+  assert.equal(india.value.answers.countryCode, 'IN')
+  assert.equal(india.value.answers.state, 'Maharashtra')
+  const badAu = validateV2Booking({
+    site: 'qvm',
+    idempotencyKey: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    slotStart: slot.start,
+    timeZone: 'Australia/Sydney',
+    turnstileToken: 'token',
+    answers: {
+      size: 'Sole agent',
+      system: 'Spreadsheets, email and shared drives',
+      bottleneck: 'after-hours enquiries',
+      first: 'Ada',
+      last: 'Lovelace',
+      email: 'ada@example.test',
+      org: 'Practice Co',
+      state: 'Maharashtra',
+      country: 'AU',
+      consent: true,
+    },
+  })
+  assert.equal(badAu.ok, false)
+  assert.ok(badAu.errors.includes('state'))
+})
+
+test('availability loads slot holds once then filters candidates in memory', async () => {
+  const { service, store } = harness()
+  const stages = []
+  service.log = {
+    info(_event, fields = {}) { if (fields.stage) stages.push(fields) },
+    warn() {},
+    error() {},
+  }
+  let listCalls = 0
+  let getCalls = 0
+  const originalList = store.list.bind(store)
+  const originalGet = store.get.bind(store)
+  store.list = async function* (...args) {
+    listCalls += 1
+    yield* originalList(...args)
+  }
+  store.get = async (...args) => {
+    if (String(args[2] || '').startsWith('slot_')) getCalls += 1
+    return originalGet(...args)
+  }
+  const held = candidateSlots(schedule, now)[0]
+  await store.create(V2_BOOKINGS_TABLE, {
+    partitionKey: 'agent',
+    rowKey: slotRowKey(held.start),
+    kind: 'site-slot',
+    bookingId: 'held',
+    expiresAt: new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+  })
+  const open = await service.availability({ site: 'agent', market: 'australia', timeZone: 'Australia/Sydney', ip: '203.0.113.40' })
+  assert.equal(open.httpStatus, 200)
+  assert.equal(listCalls, 1)
+  assert.equal(getCalls, 0)
+  assert.equal(open.body.slots.some((item) => item.start === held.start), false)
+  assert.ok(stages.some((item) => item.stage === 'slot_holds'))
+  assert.ok(stages.some((item) => item.stage === 'complete'))
+})
+
+test('availability returns a clear 503 when slot-hold SQL is unavailable', async () => {
+  const { service } = harness()
+  service.store.list = async function* () {
+    throw Object.assign(new Error('down'), { code: 'sql_unavailable' })
+  }
+  const result = await service.availability({ site: 'agent', market: 'australia', timeZone: 'Australia/Sydney', ip: '203.0.113.41' })
+  assert.equal(result.httpStatus, 503)
+  assert.equal(result.body.status, 'unconfigured')
+  assert.ok(!JSON.stringify(result.body).includes('down'))
+})
