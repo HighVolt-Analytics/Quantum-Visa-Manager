@@ -1,6 +1,9 @@
-import { ManagedIdentityCredential } from '@azure/identity'
+import { DefaultAzureCredential, ManagedIdentityCredential } from '@azure/identity'
 import { rawGraphCaller } from './functions/diagnostics.js'
 import { missingBookingSettings, readConfig } from './lib/config.js'
+import { SITES } from './lib/v2/roster.js'
+import { readLegacyTablesAccount, readSqlServer, SQL_DATABASES } from './lib/v2/config.js'
+import { SqlSiteStore } from './lib/v2/sqlStore.js'
 import { BookingService, createAvailabilityCache } from './lib/bookingService.js'
 import { CalendarClient, managedIdentityTokenProvider } from './lib/graph.js'
 import { Ledger } from './lib/ledger.js'
@@ -59,6 +62,68 @@ export function getRuntime(env = process.env) {
       return new Reconciler({ ledger: i.ledger, calendar: i.calendar, store: i.store, service, log })
     },
   }
+}
+
+/**
+ * The Function app uses its managed identity. Local development uses DefaultAzureCredential.
+ * Neither path reads a storage account key.
+ */
+export function tableCredential(env = process.env) {
+  if (String(env.WEBSITE_INSTANCE_ID || '').trim()) {
+    const clientId = String(env.AZURE_CLIENT_ID || '').trim()
+    return clientId ? new ManagedIdentityCredential({ clientId }) : new ManagedIdentityCredential()
+  }
+  return new DefaultAzureCredential()
+}
+
+/**
+ * One SQL database per site on the shared logical server.
+ * Constructing a store does not connect, create a database, or read a password.
+ * QVM v1 stays on the existing table store and is not opened here.
+ */
+function siteStores(env) {
+  const server = readSqlServer(env.BOOKING_SQL_SERVER)
+  const stores = {}
+  if (!server) {
+    for (const site of SITES) stores[site] = null
+    return stores
+  }
+  const credential = tableCredential(env)
+  for (const site of SITES) {
+    stores[site] = new SqlSiteStore({ site, server, database: SQL_DATABASES[site], credential })
+  }
+  return stores
+}
+
+/**
+ * Read-only client for the existing v1 QVM bookings table account.
+ * Uses the Function managed identity. Never reads a storage key or connection string.
+ * Host/deployment storage stays on AzureWebJobsStorage__accountName.
+ */
+function legacyTableStore(env) {
+  const accountName = readLegacyTablesAccount(env.BOOKING_LEGACY_TABLES_ACCOUNT)
+  if (!accountName) return null
+  return new AzureTableStore({
+    accountName,
+    credential: tableCredential(env),
+  })
+}
+
+/** Shared SQL stores, optional host table store, and separate legacy QVM table client. Does not create events. */
+export function getSharedResources(env = process.env) {
+  const cfg = readConfig(env)
+  const stores = siteStores(env)
+  const anySite = Object.values(stores).some(Boolean)
+  const legacyStore = legacyTableStore(env)
+  const storageConfigured = Boolean(cfg.tablesConnectionString || (cfg.storageAccount && cfg.clientId))
+  if (!storageConfigured && !anySite && !legacyStore) {
+    return { storageConfigured: false, store: null, stores, legacyStore: null, getToken: null, calendar: null }
+  }
+  if (!storageConfigured) {
+    return { storageConfigured: true, store: null, stores, legacyStore, getToken: null, calendar: null }
+  }
+  const i = (infra ??= buildInfra(cfg))
+  return { storageConfigured: true, store: i.store, stores, legacyStore, getToken: i.getToken, calendar: i.calendar }
 }
 
 export function getDiagnosticsDeps(env = process.env) {

@@ -24,12 +24,18 @@ function clean(entity) {
   return rest
 }
 
-/** Azure Table Storage adapter. Uses the managed identity in Azure and a connection string locally. */
+/**
+ * Azure Table Storage adapter.
+ * v2 site data is stored in Azure SQL. This adapter remains for QVM v1 and the Azurite test.
+ * An endpoint drops any connection string so an account key is not used.
+ * Constructing a client does not create an account or a table.
+ */
 export class AzureTableStore {
-  constructor({ accountName, credential, connectionString }) {
-    this.accountName = accountName
-    this.credential = credential
-    this.connectionString = connectionString
+  constructor({ accountName, credential, connectionString, endpoint } = {}) {
+    this.accountName = accountName || ''
+    this.credential = credential || null
+    this.endpoint = endpoint || ''
+    this.connectionString = this.endpoint ? '' : (connectionString || '')
     this.clients = new Map()
   }
 
@@ -37,7 +43,7 @@ export class AzureTableStore {
     if (!this.clients.has(table)) {
       const client = this.connectionString
         ? TableClient.fromConnectionString(this.connectionString, table, { allowInsecureConnection: true })
-        : new TableClient(`https://${this.accountName}.table.core.windows.net`, table, this.credential)
+        : new TableClient(this.endpoint || `https://${this.accountName}.table.core.windows.net`, table, this.credential)
       this.clients.set(table, client)
     }
     return this.clients.get(table)

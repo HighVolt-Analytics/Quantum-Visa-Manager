@@ -23,7 +23,7 @@ for (const kind of ['http', 'timer']) {
   }
 }
 await import('../src/index.js')
-const expected = ['availability', 'bookings', 'diagnostics', 'reconcile']
+const expected = ['availability', 'bookings', 'diagnostics', 'reconcile', 'v2Availability', 'v2Bookings', 'v2LegacyNote', 'v2MicrosoftBookings', 'v2Reconcile', 'v2StaffBooking', 'v2StaffBookings']
 if (registered.sort().join() !== expected.join()) {
   throw new Error(`Unexpected function registrations: ${registered.join(', ')}`)
 }
