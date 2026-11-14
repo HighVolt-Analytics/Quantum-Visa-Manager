@@ -241,7 +241,7 @@ describe('booking contact', () => {
     const page = await readFile(new URL('../src/content/BookDemo.html', import.meta.url), 'utf8')
     assert.equal((page.match(/mailto:arup@highvolt\.tech\?subject=Book%20a%20Demo/g) || []).length, 4)
     const support = await readFile(new URL('../src/content/Support.html', import.meta.url), 'utf8')
-    assert.ok(support.includes('hello@highvolt.tech'), 'unrelated support contact is unchanged')
+    assert.ok(support.includes('sales@highvolt.tech'), 'sales contact is on the support page')
   })
 })
 
