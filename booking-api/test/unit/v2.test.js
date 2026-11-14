@@ -644,6 +644,7 @@ test('legacy QVM table reads use BOOKING_LEGACY_TABLES_ACCOUNT and report missin
 
   service.legacyStore = {
     async *list() {
+      yield* []
       throw Object.assign(new Error('denied'), { code: 'Forbidden' })
     },
   }
