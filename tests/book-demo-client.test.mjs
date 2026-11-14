@@ -75,7 +75,7 @@ describe('Sydney time display', () => {
 describe('booking request', () => {
   it('maps the questionnaire to the API contract', () => {
     const fd = new FormData()
-    for (const [k, v] of Object.entries({ size: '2–5', system: 'A mix of several tools', systemName: '', bottleneck: 'chasing missing documents', first: ' Test ', last: 'Person', email: 'test@example.test', phone: '', org: 'Example Pty Ltd', state: 'NSW', consent: 'yes' })) fd.set(k, v)
+    for (const [k, v] of Object.entries({ size: '2–5', system: 'A mix of several tools', systemName: '', bottleneck: 'chasing missing documents', first: ' Test ', last: 'Person', email: 'test@example.test', phone: '', org: 'Example Pty Ltd', state: 'NSW', country: 'AU', consent: 'yes' })) fd.set(k, v)
     const p = buildBookingPayload({ form: fd, slotStart: '2026-10-26T23:00:00.000Z', turnstileToken: 'tok', idempotencyKey: 'k' })
     assert.deepEqual(p, {
       idempotencyKey: 'k',
@@ -83,6 +83,13 @@ describe('booking request', () => {
       turnstileToken: 'tok',
       answers: { size: '2–5', system: 'A mix of several tools', systemName: '', bottleneck: 'chasing missing documents', first: 'Test', last: 'Person', email: 'test@example.test', phone: '', org: 'Example Pty Ltd', state: 'NSW', consent: true },
     })
+    assert.equal('country' in p.answers, false)
+    assert.equal('timeZone' in p, false)
+    fd.set('timeZone', 'Australia/Sydney')
+    const v2 = buildBookingPayload({ form: fd, slotStart: '2026-10-26T23:00:00.000Z', turnstileToken: 'tok', idempotencyKey: 'k', includeCountry: true })
+    assert.equal(v2.answers.country, 'AU')
+    assert.equal(v2.timeZone, 'Australia/Sydney')
+    assert.equal(v2.answers.state, 'NSW')
   })
 
   it('reuses an idempotency key only for an identical retry', () => {
@@ -162,6 +169,8 @@ describe('Book a Demo page markup', async () => {
   it('keeps the four original questionnaire sections', () => {
     for (const legend of ['Practice size', 'Current system', 'Biggest bottleneck', 'Contact details']) assert.ok(html.includes(legend), legend)
     for (const name of ['name="size"', 'name="system"', 'name="systemName"', 'name="bottleneck"', 'name="first"', 'name="last"', 'name="email"', 'name="phone"', 'name="org"', 'name="state"', 'name="consent"']) assert.ok(html.includes(name), name)
+    assert.equal(html.includes('name="country"'), false)
+    assert.equal(html.includes('name="timeZone"'), false)
   })
 
   it('hides the time step until the questions are valid and masks the panel from Clarity', () => {

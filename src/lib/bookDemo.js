@@ -3,15 +3,22 @@ import {
   CONTACT,
   buildBookingPayload,
   buildDateOptions,
+  buildMarketDateOptions,
   confirmationDetails,
   createBookingApi,
   formatSydneyTime,
+  formatZoneTime,
   idempotencyKeyFor,
   interpretAvailability,
   interpretBooking,
   isBookingConfigured,
+  isBookingV2Enabled,
+  BOOKING_V2_SITE,
+  countryOptions,
+  timeZoneOptions,
   localEquivalent,
   sydneyZoneLabel,
+  zoneLabel,
 } from './bookingClient.js'
 
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
@@ -46,11 +53,47 @@ function el(tag, attrs = {}, ...children) {
   return node
 }
 
+function ensureCountryField(form) {
+  if (form.querySelector('[name="country"]')) return
+  const stateField = form.querySelector('[name="state"]')?.closest('.field')
+  if (!stateField) return
+  const select = el('select', { className: 'select', id: 'country', name: 'country', autocomplete: 'country', required: true }, el('option', { value: '' }, 'Select a country'))
+  for (const item of countryOptions()) select.append(el('option', { value: item.code }, item.name))
+  const field = el(
+    'div',
+    { className: 'field' },
+    el('label', { for: 'country' }, 'Country'),
+    select,
+    el('span', { className: 'err' }, 'Please select your country.'),
+  )
+  stateField.before(field)
+}
+
+function ensureTimeZoneField(form) {
+  if (form.querySelector('[name="timeZone"]')) return
+  const stateField = form.querySelector('[name="state"]')?.closest('.field')
+  if (!stateField) return
+  const select = el('select', { className: 'select', id: 'timeZone', name: 'timeZone', required: true }, el('option', { value: '' }, 'Select your timezone'))
+  for (const zone of timeZoneOptions()) select.append(el('option', { value: zone }, zone))
+  const field = el(
+    'div',
+    { className: 'field' },
+    el('label', { for: 'timeZone' }, 'Timezone'),
+    select,
+    el('span', { className: 'err' }, 'Please select your timezone. Times are 9:00 am–7:00 pm in that zone, every day.'),
+  )
+  stateField.before(field)
+}
+
 /**
  * Wires the booking step into the existing questionnaire. Returns null when the site was built
  * without a Turnstile site key or API base, so the page keeps its "temporarily unavailable" notice.
  */
 export function setupBooking(form, { onUnavailable, reduceMotion }) {
+  if (isBookingV2Enabled()) {
+    ensureCountryField(form)
+    ensureTimeZoneField(form)
+  }
   if (!isBookingConfigured({ siteKey: SITE_KEY, apiBase: API_BASE })) return null
 
   const $ = (s, r = form) => r.querySelector(s)
@@ -70,7 +113,7 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
   if (!step || !datesBox || !timesBox || !tsBox || !status || !submit || !booked || !pending) return null
 
   const api = createBookingApi({ baseUrl: API_BASE })
-  const state = { stage: 'questions', slots: [], date: null, slot: null, token: '', widgetId: null, attempt: null, busy: false }
+  const state = { stage: 'questions', slots: [], date: null, slot: null, token: '', widgetId: null, attempt: null, busy: false, schedule: null }
 
   note.textContent = 'Next, choose a 30-minute time. Times are shown in Sydney time.'
   submit.textContent = 'Choose a time'
@@ -150,10 +193,12 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
       timesHint.textContent = 'Choose a date to see available times.'
       return
     }
-    zoneNote.textContent = `All times are Sydney time, ${sydneyZoneLabel(new Date(day.slots[0].start))}.`
+    zoneNote.textContent = state.schedule?.timeZone
+      ? `All times are ${zoneLabel(new Date(day.slots[0].start), state.schedule.timeZone)}.`
+      : `All times are Sydney time, ${sydneyZoneLabel(new Date(day.slots[0].start))}.`
     timesHint.textContent = `${day.slots.length} available ${day.slots.length === 1 ? 'time' : 'times'} on ${day.longLabel}.`
     for (const s of day.slots) {
-      const local = localEquivalent(s.start)
+      const local = localEquivalent(s.start, undefined, state.schedule?.timeZone)
       const input = el('input', { type: 'radio', name: 'bookingSlot', value: s.start })
       input.addEventListener('change', () => {
         state.slot = s
@@ -162,13 +207,15 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
       })
       timesBox.append(
         el('label', { className: 'choice choice--center choice--stack' }, input,
-          el('span', {}, el('b', {}, formatSydneyTime(s.start)), local ? el('small', {}, `${local} your time`) : null)),
+          el('span', {}, el('b', {}, state.schedule?.timeZone ? formatZoneTime(s.start, state.schedule.timeZone) : formatSydneyTime(s.start)), local ? el('small', {}, `${local} your time`) : null)),
       )
     }
   }
 
   function renderDates() {
-    state.days = buildDateOptions(new Date(), state.slots)
+    state.days = state.schedule
+      ? buildMarketDateOptions(new Date(), state.slots, state.schedule)
+      : buildDateOptions(new Date(), state.slots)
     datesBox.replaceChildren()
     const firstOpen = state.days.find((d) => d.available)
     state.date = firstOpen ? firstOpen.date : null
@@ -194,7 +241,17 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
 
   async function loadTimes({ quiet = false } = {}) {
     if (!quiet) setBusy(true, 'Loading times…')
-    const res = await api.availability()
+    const country = String(new FormData(form).get('country') || '')
+    const timeZone = String(new FormData(form).get('timeZone') || '')
+    if (isBookingV2Enabled() && !country) {
+      say('Please select your country.', 'error')
+      return false
+    }
+    if (isBookingV2Enabled() && !timeZone) {
+      say('Please select your timezone.', 'error')
+      return false
+    }
+    const res = await (isBookingV2Enabled() ? api.availabilityV2(BOOKING_V2_SITE, country, timeZone) : api.availability())
     setBusy(false)
     if (res.network) {
       say(`We couldn't load available times. Check your connection and try again, or email ${CONTACT}.`, 'error')
@@ -210,6 +267,12 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
       return false
     }
     state.slots = r.slots
+    state.schedule = isBookingV2Enabled() && r.timeZone
+      ? { timeZone: r.timeZone, openWeekdays: r.openWeekdays, horizonDays: r.horizonDays }
+      : null
+    note.textContent = state.schedule
+      ? `Next, choose a time. Times are shown in ${state.schedule.timeZone}.`
+      : 'Next, choose a 30-minute time. Times are shown in Sydney time.'
     renderDates()
     if (!state.slots.length) say(`No times are available in the next 14 days. Please email ${CONTACT} and we'll arrange one.`, 'error')
     return true
@@ -291,11 +354,11 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
     const fd = new FormData(form)
     const email = String(fd.get('email') || '').trim()
     state.attempt = idempotencyKeyFor(state.attempt, { slotStart: state.slot.start, email }, () => crypto.randomUUID())
-    const payload = buildBookingPayload({ form: fd, slotStart: state.slot.start, turnstileToken: state.token, idempotencyKey: state.attempt.key })
+    const payload = buildBookingPayload({ form: fd, slotStart: state.slot.start, turnstileToken: state.token, idempotencyKey: state.attempt.key, includeCountry: isBookingV2Enabled() })
 
     setBusy(true, 'Booking…')
     say('')
-    const res = await api.book(payload)
+    const res = await (isBookingV2Enabled() ? api.bookV2({ site: BOOKING_V2_SITE, ...payload }) : api.book(payload))
     setBusy(false)
     resetTurnstile()
 

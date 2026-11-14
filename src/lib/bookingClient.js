@@ -46,6 +46,40 @@ export function buildDateOptions(now, slots) {
   return days
 }
 
+/** Market-local days. A weekday is open only when the availability response says so, including Saturday. */
+export function buildMarketDateOptions(now, slots, { timeZone, openWeekdays, horizonDays } = {}) {
+  const zone = timeZone || SYDNEY
+  const open = new Set(openWeekdays?.length ? openWeekdays : [0, 1, 2, 3, 4, 5])
+  const horizon = Number.isInteger(horizonDays) ? horizonDays : HORIZON_DAYS
+  const today = ymdInZone(now, zone)
+  const byDate = groupSlotsByDate(slots)
+  const days = []
+  for (let i = 0; i <= horizon; i++) {
+    const utc = new Date(Date.UTC(today.year, today.month - 1, today.day + i))
+    const key = `${utc.getUTCFullYear()}-${pad(utc.getUTCMonth() + 1)}-${pad(utc.getUTCDate())}`
+    const closed = !open.has(utc.getUTCDay())
+    const daySlots = closed ? [] : byDate.get(key) || []
+    days.push({
+      date: key,
+      label: shortDayLabel(utc),
+      longLabel: utcLongFormat.format(utc),
+      closed,
+      available: daySlots.length > 0,
+      slots: daySlots,
+    })
+  }
+  return days
+}
+
+function ymdInZone(date, timeZone) {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(date)
+      .map(({ type, value }) => [type, value]),
+  )
+  return { year: Number(p.year), month: Number(p.month), day: Number(p.day) }
+}
+
 export function groupSlotsByDate(slots) {
   const map = new Map()
   for (const s of slots || []) {
@@ -55,6 +89,24 @@ export function groupSlotsByDate(slots) {
   }
   for (const list of map.values()) list.sort((a, b) => a.start.localeCompare(b.start))
   return map
+}
+
+export function formatZoneTime(iso, timeZone = SYDNEY) {
+  return new Intl.DateTimeFormat('en-AU', { timeZone, hour: 'numeric', minute: '2-digit', hour12: true })
+    .format(new Date(iso))
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+}
+
+export function zoneLabel(date, timeZone) {
+  const name = new Intl.DateTimeFormat('en-AU', { timeZone, timeZoneName: 'short' })
+    .formatToParts(date)
+    .find((p) => p.type === 'timeZoneName')?.value
+  const minutes = zoneOffsetMinutes(date, timeZone)
+  const sign = minutes >= 0 ? '+' : '-'
+  const abs = Math.abs(minutes)
+  const offset = `UTC${sign}${Math.floor(abs / 60)}${abs % 60 ? `:${pad(abs % 60)}` : ''}`
+  return name && !/^GMT|^UTC/.test(name) ? `${name} (${offset})` : offset
 }
 
 export function formatSydneyTime(iso) {
@@ -87,10 +139,10 @@ function sydneyOffsetMinutes(date) {
 }
 
 /** The visitor's local equivalent, or null when they are already on Sydney time. */
-export function localEquivalent(iso, visitorZone) {
+export function localEquivalent(iso, visitorZone, marketZone = SYDNEY) {
   const zone = visitorZone || Intl.DateTimeFormat().resolvedOptions().timeZone
   const d = new Date(iso)
-  if (!zone || sydneyOffsetMinutes(d) === zoneOffsetMinutes(d, zone)) return null
+  if (!zone || zoneOffsetMinutes(d, marketZone) === zoneOffsetMinutes(d, zone)) return null
   return new Intl.DateTimeFormat('en-AU', { timeZone: zone, weekday: 'short', hour: 'numeric', minute: '2-digit', hour12: true, timeZoneName: 'short' })
     .format(d)
     .replace(/\s+/g, ' ')
@@ -99,10 +151,10 @@ export function localEquivalent(iso, visitorZone) {
 const longSydneyDate = new Intl.DateTimeFormat('en-AU', { timeZone: SYDNEY, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
 /** The visitor's local date and time range, or null when they are already on Sydney time. */
-export function localAppointment(startIso, endIso, visitorZone) {
+export function localAppointment(startIso, endIso, visitorZone, marketZone = SYDNEY) {
   const zone = visitorZone || Intl.DateTimeFormat().resolvedOptions().timeZone
   const start = new Date(startIso)
-  if (!zone || sydneyOffsetMinutes(start) === zoneOffsetMinutes(start, zone)) return null
+  if (!zone || zoneOffsetMinutes(start, marketZone) === zoneOffsetMinutes(start, zone)) return null
   const time = (iso) =>
     new Intl.DateTimeFormat('en-AU', { timeZone: zone, hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(iso)).replace(/\s+/g, ' ').toLowerCase()
   const parts = Object.fromEntries(
@@ -120,11 +172,16 @@ export function localAppointment(startIso, endIso, visitorZone) {
  */
 export function confirmationDetails({ slot, reference }, email, visitorZone) {
   const start = new Date(slot.start)
+  const zone = slot.timeZone || SYDNEY
+  const clock = (iso) => formatZoneTime(iso, zone)
+  const date = zone === SYDNEY
+    ? longSydneyDate.format(start)
+    : new Intl.DateTimeFormat('en-AU', { timeZone: zone, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(start)
   return {
-    date: longSydneyDate.format(start),
-    time: slot.end ? `${formatSydneyTime(slot.start)}–${formatSydneyTime(slot.end)}` : formatSydneyTime(slot.start),
-    zone: `Sydney time, ${sydneyZoneLabel(start)}`,
-    local: localAppointment(slot.start, slot.end, visitorZone),
+    date,
+    time: slot.end ? `${clock(slot.start)}–${clock(slot.end)}` : clock(slot.start),
+    zone: zone === SYDNEY ? `Sydney time, ${sydneyZoneLabel(start)}` : zoneLabel(start, zone),
+    local: localAppointment(slot.start, slot.end, visitorZone, zone),
     email: String(email || '').trim(),
     reference: String(reference),
   }
@@ -141,12 +198,15 @@ function zoneOffsetMinutes(date, zone) {
 
 const FIELD_NAMES = ['size', 'system', 'systemName', 'bottleneck', 'first', 'last', 'email', 'phone', 'org', 'state']
 
-/** Builds the exact request body the booking API validates. */
-export function buildBookingPayload({ form, slotStart, turnstileToken, idempotencyKey }) {
+/** Builds the exact request body the booking API validates. Country and timezone are sent only for v2. */
+export function buildBookingPayload({ form, slotStart, turnstileToken, idempotencyKey, includeCountry = false }) {
   const answers = {}
   for (const name of FIELD_NAMES) answers[name] = String(form.get(name) ?? '').trim()
+  if (includeCountry) answers.country = String(form.get('country') ?? '').trim()
   answers.consent = form.get('consent') === 'yes'
-  return { idempotencyKey, slotStart, turnstileToken, answers }
+  const payload = { idempotencyKey, slotStart, turnstileToken, answers }
+  if (includeCountry) payload.timeZone = String(form.get('timeZone') ?? '').trim()
+  return payload
 }
 
 /** Reuses the idempotency key only when retrying the identical booking. */
@@ -192,7 +252,13 @@ export function interpretBooking(httpStatus, body) {
 
 export function interpretAvailability(httpStatus, body) {
   const b = body && typeof body === 'object' ? body : {}
-  if (httpStatus === 200 && b.status === 'ok' && Array.isArray(b.slots)) return { kind: 'ok', slots: b.slots }
+  if (httpStatus === 200 && b.status === 'ok' && Array.isArray(b.slots)) {
+    const result = { kind: 'ok', slots: b.slots }
+    if (typeof b.timeZone === 'string') result.timeZone = b.timeZone
+    if (Array.isArray(b.openWeekdays)) result.openWeekdays = b.openWeekdays.map(Number)
+    if (Number.isInteger(b.horizonDays)) result.horizonDays = b.horizonDays
+    return result
+  }
   if (b.status === 'unavailable') return { kind: 'unavailable', message: fallback(b.message) }
   if (b.status === 'rate_limited') return { kind: 'retry_later', message: fallback(b.message) }
   return { kind: 'error', message: fallback(b.message) }
@@ -217,13 +283,47 @@ export function createBookingApi({ baseUrl, fetchImpl = (...a) => fetch(...a), t
   }
   return {
     availability: () => call('/api/availability', { method: 'GET', headers: { Accept: 'application/json' } }),
+    availabilityV2: (site, country, timeZone) =>
+      call(`/api/v2/availability?site=${encodeURIComponent(site)}&country=${encodeURIComponent(country)}&timeZone=${encodeURIComponent(timeZone || '')}`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      }),
     book: (payload) =>
       call('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(payload),
       }),
+    bookV2: (payload) =>
+      call('/api/v2/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload),
+      }),
   }
+}
+
+/** Off unless the build sets this to the exact string true. Production builds leave it unset. */
+export const BOOKING_V2_SITE = 'qvm'
+export function isBookingV2Enabled() {
+  return import.meta.env.VITE_BOOKING_V2_ENABLED === 'true'
+}
+
+const COUNTRY_CODES = 'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW'.split(' ')
+
+/** ISO countries and territories. The value is the code; the server derives the roster from it. */
+/** IANA zones. The control starts empty so a device zone is only used after the visitor selects it. */
+export function timeZoneOptions() {
+  const zones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : []
+  return [...zones].sort((a, b) => a.localeCompare(b, 'en'))
+}
+
+export function countryOptions() {
+  const display = new Intl.DisplayNames(['en'], { type: 'region' })
+  return COUNTRY_CODES.map((code) => {
+    const name = display.of(code)
+    return name && name !== code ? { code, name } : null
+  }).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'en'))
 }
 
 export function isBookingConfigured({ siteKey, apiBase }) {
