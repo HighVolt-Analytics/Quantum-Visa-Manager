@@ -808,6 +808,7 @@ test('availability loads slot holds once then filters candidates in memory', asy
 test('availability returns a clear 503 when slot-hold SQL is unavailable', async () => {
   const { service } = harness()
   service.store.list = async function* () {
+    yield* []
     throw Object.assign(new Error('down'), { code: 'sql_unavailable' })
   }
   const result = await service.availability({ site: 'agent', market: 'australia', timeZone: 'Australia/Sydney', ip: '203.0.113.41' })
