@@ -22,12 +22,33 @@ function choice(value, options) {
   return typeof value === 'string' && options.includes(value) ? { value } : { error: 'invalid' }
 }
 
-/** Site-specific checks. Unknown answer keys are dropped. QVM keeps its existing choice lists. */
+const KNOWN_ANSWER_KEYS = new Set([
+  'size',
+  'system',
+  'systemName',
+  'bottleneck',
+  'first',
+  'last',
+  'email',
+  'phone',
+  'org',
+  'state',
+  'country',
+  'countryCode',
+  'partner',
+  'consent',
+])
+
+/**
+ * Site-specific checks. QVM keeps its existing choice lists.
+ * Consent is stored when accepted. Extra submitted answer keys are kept after light sanitization
+ * so the portal can show site-specific fields without inventing values.
+ */
 export function validateV2Booking(body) {
   const errors = []
   if (!body || typeof body !== 'object' || Array.isArray(body)) return { ok: false, errors: ['body'] }
   const site = SITES.includes(body.site) ? body.site : (errors.push('site'), undefined)
-  const a = body.answers && typeof body.answers === 'object' ? body.answers : {}
+  const a = body.answers && typeof body.answers === 'object' && !Array.isArray(body.answers) ? body.answers : {}
   const check = (field, result) => {
     if (result.error) errors.push(field)
     return result.value
@@ -52,6 +73,7 @@ export function validateV2Booking(body) {
     country: '',
     countryCode: '',
     partner: a.partner === true,
+    consent: false,
   }
   const country = resolveCountry(a.country)
   if (!country) errors.push('country')
@@ -62,6 +84,27 @@ export function validateV2Booking(body) {
   if (answers.email && !EMAIL.test(answers.email)) errors.push('email')
   if (answers.phone && !PHONE.test(answers.phone)) errors.push('phone')
   if (a.consent !== true) errors.push('consent')
+  else answers.consent = true
+
+  for (const [key, value] of Object.entries(a)) {
+    if (KNOWN_ANSWER_KEYS.has(key)) continue
+    if (typeof key !== 'string' || !key || key.length > 64 || CONTROL.test(key)) continue
+    if (typeof value === 'boolean') {
+      answers[key] = value
+      continue
+    }
+    if (typeof value === 'string') {
+      const extra = text(value, { required: false, max: 500 })
+      if (!extra.error && extra.value) answers[key] = extra.value
+      continue
+    }
+    if (Array.isArray(value)) {
+      const joined = value.filter((item) => typeof item === 'string').join(', ')
+      const extra = text(joined, { required: false, max: 500 })
+      if (!extra.error && extra.value) answers[key] = extra.value
+    }
+  }
+
   if (errors.length) return { ok: false, errors: [...new Set(errors)] }
   return { ok: true, value: { site, idempotencyKey, slotStart, turnstileToken, timeZone, answers } }
 }

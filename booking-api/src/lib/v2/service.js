@@ -509,7 +509,15 @@ export class V2BookingService {
     try {
       const row = await store.get(V2_BOOKINGS_TABLE, site, `bkg_${bookingId}`)
       if (!row) return { status: 'not_found', booking: null }
-      return { status: 'ok', booking: { ...this.staffSummary(row), answersOriginal: row.answersOriginal || '' } }
+      const summary = this.staffSummary(row)
+      return {
+        status: 'ok',
+        booking: {
+          ...summary,
+          answersOriginal: row.answersOriginal || '',
+          answers: summary.answers,
+        },
+      }
     } catch (err) {
       this.log.warn('v2_site_read_failed', { site, code: err?.code || 'unavailable' })
       return { status: 'unavailable', booking: null }
@@ -521,10 +529,12 @@ export class V2BookingService {
     let answers = {}
     try { invitees = JSON.parse(row.invitees || '[]') } catch { invitees = [] }
     try { answers = JSON.parse(row.answersOriginal || '{}') } catch { answers = {} }
+    if (!answers || typeof answers !== 'object' || Array.isArray(answers)) answers = {}
     return {
       bookingId: row.bookingId,
       site: row.site,
       source: row.source || 'site-form',
+      readOnly: false,
       market: row.market,
       country: answers.country || '',
       countryCode: answers.countryCode || '',
@@ -536,7 +546,10 @@ export class V2BookingService {
       meetingStatus: row.meetingStatus,
       eventIdPresent: Boolean(row.eventId),
       attendeeName: row.attendeeName,
+      attendeeEmail: row.attendeeEmail || answers.email || '',
       organization: row.organization,
+      answers,
+      answersPresent: Object.keys(answers).length > 0,
       invitees,
       notifications: JSON.parse(row.staffNotify || '{}'),
     }
