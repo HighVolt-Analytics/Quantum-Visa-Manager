@@ -23,6 +23,7 @@ import {
 
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
 const API_BASE = import.meta.env.VITE_BOOKING_API_BASE || ''
+const API_BASE_V2 = import.meta.env.VITE_BOOKING_V2_API_BASE || ''
 const TURNSTILE_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
 
 let turnstileLoading = null
@@ -95,6 +96,7 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
     ensureTimeZoneField(form)
   }
   if (!isBookingConfigured({ siteKey: SITE_KEY, apiBase: API_BASE })) return null
+  if (isBookingV2Enabled() && !isBookingConfigured({ siteKey: SITE_KEY, apiBase: API_BASE_V2 })) return null
 
   const $ = (s, r = form) => r.querySelector(s)
   const panel = form.parentElement
@@ -112,7 +114,7 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
   const pending = panel.querySelector('[data-pending]')
   if (!step || !datesBox || !timesBox || !tsBox || !status || !submit || !booked || !pending) return null
 
-  const api = createBookingApi({ baseUrl: API_BASE })
+  const api = createBookingApi({ baseUrl: API_BASE, v2BaseUrl: API_BASE_V2 })
   const state = { stage: 'questions', slots: [], date: null, slot: null, token: '', widgetId: null, attempt: null, busy: false, schedule: null }
 
   note.textContent = 'Next, choose a 30-minute time. Times are shown in Sydney time.'
