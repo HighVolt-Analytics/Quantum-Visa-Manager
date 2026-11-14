@@ -7,6 +7,7 @@ import { slotRowKey } from '../../src/lib/schedule.js'
 import { Ledger } from '../../src/lib/ledger.js'
 import { Reconciler } from '../../src/lib/reconciler.js'
 import { publicWriteGate, readLegacyTablesAccount, readSqlServer, readV2Config, siteStorageSetting, siteTurnstileHostnames, SQL_DATABASES, V2_BOOKINGS_TABLE, V2_ORGANIZER_MAILBOX } from '../../src/lib/v2/config.js'
+import { validateV2Booking } from '../../src/lib/v2/validation.js'
 import { SqlSiteStore } from '../../src/lib/v2/sqlStore.js'
 import { getSharedResources, tableCredential } from '../../src/runtime.js'
 import { DefaultAzureCredential, ManagedIdentityCredential } from '@azure/identity'
@@ -95,6 +96,57 @@ function body(site, extra = {}) {
     },
   }
 }
+
+test('v2 validation stores consent and keeps extra submitted answer fields', () => {
+  const base = {
+    site: 'agent',
+    idempotencyKey: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    slotStart: '2026-11-08T22:00:00.000Z',
+    timeZone: 'Australia/Sydney',
+    turnstileToken: 'token',
+    answers: {
+      size: '2–10 people',
+      system: 'Phone',
+      bottleneck: 'Missed calls',
+      first: 'Ada',
+      last: 'Lovelace',
+      email: 'ada@example.test',
+      org: 'Example Co',
+      country: 'Australia',
+      consent: true,
+      channelPreference: 'WhatsApp',
+      partner: true,
+    },
+  }
+  const ok = validateV2Booking(base)
+  assert.equal(ok.ok, true)
+  assert.equal(ok.value.answers.consent, true)
+  assert.equal(ok.value.answers.partner, true)
+  assert.equal(ok.value.answers.channelPreference, 'WhatsApp')
+  assert.equal(ok.value.answers.country, 'Australia')
+
+  const qvm = validateV2Booking({
+    ...base,
+    site: 'qvm',
+    answers: {
+      size: 'Sole agent',
+      system: 'Spreadsheets, email and shared drives',
+      bottleneck: 'after-hours enquiries',
+      first: 'Ada',
+      last: 'Lovelace',
+      email: 'ada@example.test',
+      org: 'Practice Co',
+      state: 'NSW',
+      country: 'Australia',
+      consent: true,
+      referralSource: 'Colleague',
+    },
+  })
+  assert.equal(qvm.ok, true)
+  assert.equal(qvm.value.answers.state, 'NSW')
+  assert.equal(qvm.value.answers.referralSource, 'Colleague')
+  assert.equal(qvm.value.answers.consent, true)
+})
 
 test('v2 switches default off and HVA stays off', () => {
   const cfg = readV2Config({})
