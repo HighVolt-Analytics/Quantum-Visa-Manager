@@ -88,6 +88,10 @@ QVM keeps its practice state question. The selected country, not that state, cho
 
 `GET /api/v2/staff/legacy-notes/{bookingId}` reads the existing private calendar note for that v1 booking id. It does not create, update, or copy meetings. If the note was never written, the response is `not_found`.
 
+## Meeting lookup (staff diagnostic)
+
+`GET /api/v2/staff/meeting-lookup/{bookingId}` requires the same `Authorization: Bearer` staff token as other staff routes (`BOOKINGS_PORTAL_API_TOKEN`). It runs the same Graph `findByBooking` lookup used before meeting creation against `support@highvolt.tech`. It does not create events, send mail, or read or write SQL. The JSON body reports only `found`, `httpStatus`, and `graphCode`.
+
 ## Frontend gate
 
 Marketing sites call v2 only when `VITE_BOOKING_V2_ENABLED` is exactly `true` at build time. That variable is not set. v2 availability and booking requests use `VITE_BOOKING_V2_API_BASE`; v1 keeps `VITE_BOOKING_API_BASE`. Otherwise they keep posting to v1 and keep the Sydney calendar.
