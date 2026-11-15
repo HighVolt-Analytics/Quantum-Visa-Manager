@@ -256,11 +256,39 @@ export class V2BookingService {
       }
       throw err
     }
-    const stored = await store.get(V2_BOOKINGS_TABLE, site, booking.rowKey)
-    await this.commitHold(stored)
-    const meeting = await this.ensureMeeting(stored, emailed.recipients, answers.email, booking.attendeeName)
-    const mailed = await this.ensureStaffMail(meeting.booking)
-    return this.publicResult(mailed)
+    let stage = 'load_booking'
+    try {
+      this.log.info('v2_create_stage', { bookingId, site, stage })
+      const stored = await store.get(V2_BOOKINGS_TABLE, site, booking.rowKey)
+      if (!stored || stored.kind !== 'booking') {
+        const err = new TypeError('booking_reload_invalid')
+        err.code = 'booking_reload_invalid'
+        throw err
+      }
+      stage = 'commit_hold'
+      this.log.info('v2_create_stage', { bookingId, site, stage })
+      await this.commitHold(stored)
+      stage = 'ensure_meeting'
+      this.log.info('v2_create_stage', { bookingId, site, stage })
+      const meeting = await this.ensureMeeting(stored, emailed.recipients, answers.email, booking.attendeeName)
+      stage = 'ensure_staff_mail'
+      this.log.info('v2_create_stage', { bookingId, site, stage })
+      const mailed = await this.ensureStaffMail(meeting.booking)
+      this.log.info('v2_create_stage', { bookingId, site, stage: 'complete' })
+      return this.publicResult(mailed)
+    } catch (err) {
+      this.log.error('v2_booking_error', {
+        bookingId,
+        site,
+        stage,
+        code: errorCode(err),
+        errorType: err?.name || 'Error',
+      })
+      err.bookingId = err.bookingId || bookingId
+      err.site = err.site || site
+      err.stage = err.stage || stage
+      throw err
+    }
   }
 
   async replay(site, requestRow, fingerprint) {

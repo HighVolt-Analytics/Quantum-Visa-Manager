@@ -1,6 +1,6 @@
 // Only these keys reach the logs. Customer names, emails, phone numbers, answers,
 // IP addresses and tokens must never be passed here.
-const SAFE_KEYS = new Set(['bookingId', 'state', 'status', 'code', 'httpStatus', 'attempt', 'count', 'reason', 'durationMs', 'op', 'category', 'site', 'market', 'stage'])
+const SAFE_KEYS = new Set(['bookingId', 'state', 'status', 'code', 'httpStatus', 'attempt', 'count', 'reason', 'durationMs', 'op', 'category', 'site', 'market', 'stage', 'errorType'])
 
 function format(event, fields) {
   const parts = [`qvm.event=${event}`]
