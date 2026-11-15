@@ -1,7 +1,7 @@
 import { NOTE_PROPERTY_ID, RATE_LIMITS, SLOT_MINUTES, TIME_ZONE } from './config.js'
 import { GraphError } from './graph.js'
 import { bookingReference, hmacHex, newBookingId, sha256Hex } from './hash.js'
-import { CONTACT } from './http.js'
+import { CONTACT, rateLimitedResponse } from './http.js'
 import { STATES } from './ledger.js'
 import { errorCode } from './log.js'
 import { customerEventPayload, privateNotePayload } from './payloads.js'
@@ -12,7 +12,12 @@ import { validateBookingRequest } from './validation.js'
 const SLOT_MS = SLOT_MINUTES * 60000
 const MAX_NOTE_ATTEMPTS = 5
 
-const reply = (httpStatus, body) => ({ httpStatus, body })
+const reply = (httpStatus, body, headers) => (headers ? { httpStatus, body, headers } : { httpStatus, body })
+
+function rateLimitedReply(retryAfterSeconds) {
+  const res = rateLimitedResponse(retryAfterSeconds)
+  return reply(res.status, res.jsonBody, res.headers)
+}
 
 function publicSlot(slot) {
   return { start: slot.start, end: slot.end, date: slot.date, time: slot.time, endTime: slot.endTime, weekday: slot.weekday, timeZone: TIME_ZONE, label: slotLabel(slot) }
@@ -50,14 +55,14 @@ export class BookingService {
   }
 
   async rateLimited(scope, ip, now) {
-    const { allowed } = await consumeRateLimit(this.store, {
+    const result = await consumeRateLimit(this.store, {
       scope,
       subject: this.subjectHash('ip', ip, now),
       ...RATE_LIMITS[scope],
       now,
     })
-    if (!allowed) this.log.warn('rate_limited', { reason: scope })
-    return !allowed
+    if (!result.allowed) this.log.warn('rate_limited', { reason: scope })
+    return { limited: !result.allowed, retryAfterSeconds: result.retryAfterSeconds }
   }
 
   async openSlots(now) {
@@ -78,7 +83,8 @@ export class BookingService {
 
   async availability({ ip }) {
     const now = this.now()
-    if (await this.rateLimited('availability', ip, now)) return reply(429, { status: 'rate_limited', message: 'Too many requests. Please try again shortly.' })
+    const availabilityLimit = await this.rateLimited('availability', ip, now)
+    if (availabilityLimit.limited) return rateLimitedReply(availabilityLimit.retryAfterSeconds)
     if (this.cache.value && now.getTime() - this.cache.at < this.cache.ttlMs) return reply(200, this.cache.value)
     const slots = await this.openSlots(now)
     const body = { status: 'ok', timeZone: TIME_ZONE, durationMinutes: SLOT_MINUTES, slots: slots.map(publicSlot) }
@@ -99,7 +105,8 @@ export class BookingService {
     const existing = await this.ledger.getRequest(requestHash)
     if (existing) return this.replay(existing, fingerprint)
 
-    if (await this.rateLimited('booking', ip, now)) return reply(429, { status: 'rate_limited', message: 'Too many requests. Please try again shortly.' })
+    const bookingLimit = await this.rateLimited('booking', ip, now)
+    if (bookingLimit.limited) return rateLimitedReply(bookingLimit.retryAfterSeconds)
 
     const check = await this.verifyTurnstile({ token: turnstileToken, remoteIp: ip, idempotencyKey })
     if (!check.ok) {

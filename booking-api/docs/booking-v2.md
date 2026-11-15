@@ -54,7 +54,7 @@ v2 meetings are organized by `support@highvolt.tech`, and staff notification mai
 
 Existing Microsoft Bookings appointments are read for the portal only. They are not copied into the five databases and no meeting is created from that list. The business id is `BOOKING_MS_BOOKINGS_BUSINESS_ID`. The application permission is `Bookings.Read.All`. Do not request a Bookings write permission.
 
-Availability is limited to 30 requests per 10 minutes per caller, and booking to 5 per hour, using scopes `v2-availability` and `v2-booking`. The limit is recorded before `createEvent` or `sendMail`. Assignee free/busy is not a reason to hide a slot.
+Availability is limited to 30 requests per 10 minutes per caller, and booking to 10 per hour, using scopes `v2-availability` and `v2-booking`. These numeric limits are a shared default for all v2 sites (and v1 booking uses the same booking/availability numbers); counters are stored per site database, but there is no per-site override for the limit value. The booking counter is consumed after validation and slot checks, and before Turnstile and email-conflict checks, so failed verification and `already_booked` responses still count. When limited, responses may include `retryAfterSeconds` and a `Retry-After` header. Assignee free/busy is not a reason to hide a slot.
 
 Turnstile hostnames come only from `BOOKING_ORIGINS_<SITE>` for the submitted site. A token whose hostname belongs to another site is rejected. An empty origin list fails closed.
 

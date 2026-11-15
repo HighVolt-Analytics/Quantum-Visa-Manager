@@ -26,7 +26,7 @@ export function makeBookingsHandler(getRuntime) {
         return json(400, { status: 'invalid', fields: ['body'] })
       }
       const result = await rt.service(log).createBooking({ body, ip: clientIp(request) })
-      return json(result.httpStatus, result.body)
+      return json(result.httpStatus, result.body, result.headers)
     } catch (err) {
       log.error('booking_error', { code: errorCode(err) })
       return RESPONSES.error()

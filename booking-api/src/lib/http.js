@@ -3,18 +3,40 @@ const BASE_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
 }
 
-export function json(status, body) {
-  return { status, jsonBody: body, headers: { ...BASE_HEADERS } }
+export function json(status, body, extraHeaders = {}) {
+  return { status, jsonBody: body, headers: { ...BASE_HEADERS, ...extraHeaders } }
 }
 
 export const CONTACT = 'hello@highvolt.tech'
+
+/** Public 429 body + Retry-After. retryAfterSeconds is optional for older callers. */
+export function rateLimitedResponse(retryAfterSeconds) {
+  const seconds = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+    ? Math.ceil(retryAfterSeconds)
+    : undefined
+  const message = seconds
+    ? `Too many attempts. Please try again in about ${formatRetryAfter(seconds)}.`
+    : 'Too many attempts. Please try again shortly.'
+  const body = { status: 'rate_limited', message }
+  if (seconds) body.retryAfterSeconds = seconds
+  const headers = seconds ? { 'Retry-After': String(seconds) } : {}
+  return json(429, body, headers)
+}
+
+function formatRetryAfter(seconds) {
+  if (seconds < 60) return `${seconds} second${seconds === 1 ? '' : 's'}`
+  const minutes = Math.ceil(seconds / 60)
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'}`
+  const hours = Math.ceil(minutes / 60)
+  return `${hours} hour${hours === 1 ? '' : 's'}`
+}
 
 export const RESPONSES = Object.freeze({
   disabled: () => json(503, { status: 'unavailable', message: `Online scheduling is temporarily unavailable. Please email ${CONTACT}.` }),
   forbidden: () => json(403, { status: 'forbidden' }),
   tooLarge: () => json(413, { status: 'invalid' }),
   unsupported: () => json(415, { status: 'invalid' }),
-  rateLimited: () => json(429, { status: 'rate_limited', message: 'Too many requests. Please try again shortly.' }),
+  rateLimited: (retryAfterSeconds) => rateLimitedResponse(retryAfterSeconds),
   error: () => json(500, { status: 'error', message: `Something went wrong. Please email ${CONTACT}.` }),
 })
 

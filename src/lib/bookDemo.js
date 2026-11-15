@@ -463,7 +463,7 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
       say(`We couldn't load available times. Check your connection and try again, or email ${CONTACT}.`, 'error')
       return false
     }
-    const r = interpretAvailability(res.httpStatus, res.body)
+    const r = interpretAvailability(res.httpStatus, res.body, res.headers)
     if (r.kind === 'unavailable') {
       onUnavailable()
       return false
@@ -572,14 +572,21 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
       say("We couldn't reach the booking service. Please complete the security check and press Confirm booking again — you won't be booked twice.", 'error')
       return
     }
-    const r = interpretBooking(res.httpStatus, res.body)
+    const r = interpretBooking(res.httpStatus, res.body, res.headers)
     if (r.kind === 'confirmed' || r.kind === 'pending') {
       state.stage = 'done'
       return r.kind === 'confirmed' ? showBooked(r, email) : showPending(r)
     }
 
-    state.attempt = null
+    // Keep the same idempotency key for retries of this submission after rate limits / network.
+    if (r.kind !== 'retry_later') state.attempt = null
     switch (r.kind) {
+      case 'already_booked':
+        say(r.message, 'error')
+        return
+      case 'retry_later':
+        say(r.message, 'error')
+        return
       case 'slot_gone':
         say(r.message, 'error')
         await loadTimes({ quiet: true })

@@ -174,6 +174,19 @@ describe('API responses', () => {
     assert.deepEqual(interpretBooking(400, { status: 'invalid', fields: ['email'] }).fields, ['email'])
   })
 
+  it('explains already_booked and rate_limited without a generic failure', () => {
+    const booked = interpretBooking(409, { status: 'already_booked' })
+    assert.equal(booked.kind, 'already_booked')
+    assert.match(booked.message, /already has a booking/i)
+    assert.equal(/something went wrong/i.test(booked.message), false)
+    const limited = interpretBooking(429, { status: 'rate_limited', retryAfterSeconds: 120 }, { 'Retry-After': '120' })
+    assert.equal(limited.kind, 'retry_later')
+    assert.equal(limited.retryAfterSeconds, 120)
+    assert.match(limited.message, /too many attempts/i)
+    assert.match(limited.message, /2 minute/i)
+    assert.equal(/couldn.?t reach|network error|service is down/i.test(limited.message), false)
+  })
+
   it('maps availability responses', () => {
     assert.deepEqual(interpretAvailability(200, { status: 'ok', slots: [] }), { kind: 'ok', slots: [] })
     assert.equal(interpretAvailability(503, { status: 'unavailable', message: 'off' }).kind, 'unavailable')

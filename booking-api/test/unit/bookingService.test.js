@@ -114,11 +114,20 @@ describe('booking flow', () => {
   })
 
   it('rate limits booking attempts per IP', async () => {
-    const t = setup()
-    const slots = ['2026-10-26T23:00:00.000Z', '2026-10-26T23:30:00.000Z', '2026-10-27T00:00:00.000Z', '2026-10-27T00:30:00.000Z', '2026-10-27T01:00:00.000Z', '2026-10-27T01:30:00.000Z']
+    // Failed Turnstile still consumes the shared booking counter (10/hour); the 11th attempt is 429.
+    const t = setup({ turnstile: () => ({ ok: false, reason: 'rejected' }) })
     const results = []
-    for (const slotStart of slots) results.push((await t.service.createBooking({ body: bookingBody({ slotStart }), ip: IP })).httpStatus)
-    assert.deepEqual(results, [200, 200, 200, 200, 200, 429])
+    for (let i = 0; i < 11; i++) {
+      results.push(await t.service.createBooking({
+        body: bookingBody({ idempotencyKey: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}` }),
+        ip: IP,
+      }))
+    }
+    assert.deepEqual(results.slice(0, 10).map((r) => r.httpStatus), Array(10).fill(403))
+    assert.equal(results[10].httpStatus, 429)
+    assert.equal(results[10].body.status, 'rate_limited')
+    assert.ok(Number(results[10].body.retryAfterSeconds) > 0)
+    assert.equal(results[10].headers['Retry-After'], String(results[10].body.retryAfterSeconds))
   })
 })
 

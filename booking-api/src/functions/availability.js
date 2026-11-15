@@ -12,7 +12,7 @@ export function makeAvailabilityHandler(getRuntime) {
         return RESPONSES.disabled()
       }
       const result = await rt.service(log).availability({ ip: clientIp(request) })
-      return json(result.httpStatus, result.body)
+      return json(result.httpStatus, result.body, result.headers)
     } catch (err) {
       log.error('availability_error', { code: errorCode(err) })
       return RESPONSES.error()
