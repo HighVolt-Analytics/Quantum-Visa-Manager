@@ -91,6 +91,59 @@ export function groupSlotsByDate(slots) {
   return map
 }
 
+const CAL_WEEKDAYS = Object.freeze(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+
+/** Monday-first month grid for the book-demo calendar. Day options come from buildDateOptions / buildMarketDateOptions. */
+export function buildCalendarMonth(year, month, dayOptions, selectedDate) {
+  const byDate = new Map((dayOptions || []).map((day) => [day.date, day]))
+  const first = new Date(Date.UTC(year, month, 1))
+  const startOffset = (first.getUTCDay() + 6) % 7
+  const gridStart = new Date(Date.UTC(year, month, 1 - startOffset))
+  const cells = []
+  for (let i = 0; i < 42; i++) {
+    const utc = new Date(Date.UTC(gridStart.getUTCFullYear(), gridStart.getUTCMonth(), gridStart.getUTCDate() + i))
+    const key = `${utc.getUTCFullYear()}-${pad(utc.getUTCMonth() + 1)}-${pad(utc.getUTCDate())}`
+    const day = byDate.get(key)
+    const inMonth = utc.getUTCMonth() === month
+    const available = Boolean(day?.available)
+    cells.push({
+      date: key,
+      day: utc.getUTCDate(),
+      inMonth,
+      available,
+      closed: Boolean(day?.closed),
+      disabled: !available,
+      selected: available && key === selectedDate,
+      label: day?.label || shortDayLabel(utc),
+      longLabel: day?.longLabel || utcLongFormat.format(utc),
+      slots: day?.slots || [],
+    })
+  }
+  const label = new Intl.DateTimeFormat('en-AU', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
+    new Date(Date.UTC(year, month, 1)),
+  )
+  return { year, month, label, weekdays: CAL_WEEKDAYS, cells }
+}
+
+/** Shift a calendar month. month is 0–11. */
+export function shiftCalendarMonth(year, month, delta) {
+  const next = new Date(Date.UTC(year, month + delta, 1))
+  return { year: next.getUTCFullYear(), month: next.getUTCMonth() }
+}
+
+/** Earliest month that intersects the booking horizon day list. */
+export function calendarMonthFromDays(dayOptions, preferredDate) {
+  const key = preferredDate && (dayOptions || []).some((d) => d.date === preferredDate && d.available)
+    ? preferredDate
+    : (dayOptions || []).find((d) => d.available)?.date || (dayOptions || [])[0]?.date
+  if (!key || !/^\d{4}-\d{2}-\d{2}$/.test(key)) {
+    const now = new Date()
+    return { year: now.getUTCFullYear(), month: now.getUTCMonth() }
+  }
+  const [y, m] = key.split('-').map(Number)
+  return { year: y, month: m - 1 }
+}
+
 export function formatZoneTime(iso, timeZone = SYDNEY) {
   return new Intl.DateTimeFormat('en-AU', { timeZone, hour: 'numeric', minute: '2-digit', hour12: true })
     .format(new Date(iso))

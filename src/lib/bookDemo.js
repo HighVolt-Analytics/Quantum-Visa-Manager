@@ -2,8 +2,10 @@
 import {
   CONTACT,
   buildBookingPayload,
+  buildCalendarMonth,
   buildDateOptions,
   buildMarketDateOptions,
+  calendarMonthFromDays,
   confirmationDetails,
   createBookingApi,
   formatSydneyTime,
@@ -17,6 +19,7 @@ import {
   countryOptions,
   detectTimeZone,
   regionsForCountry,
+  shiftCalendarMonth,
   timeZoneChoices,
   localEquivalent,
   sydneyZoneLabel,
@@ -222,7 +225,19 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
   if (!step || !datesBox || !timesBox || !tsBox || !status || !submit || !booked || !pending) return null
 
   const api = createBookingApi({ baseUrl: API_BASE, v2BaseUrl: API_BASE_V2 })
-  const state = { stage: 'questions', slots: [], date: null, slot: null, token: '', widgetId: null, attempt: null, busy: false, schedule: null }
+  const state = {
+    stage: 'questions',
+    slots: [],
+    days: [],
+    date: null,
+    slot: null,
+    token: '',
+    widgetId: null,
+    attempt: null,
+    busy: false,
+    schedule: null,
+    calendar: null,
+  }
 
   note.textContent = 'Next, choose a 30-minute time. Times are shown in Sydney time.'
   submit.textContent = 'Choose a time'
@@ -243,7 +258,7 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
     } else {
       submit.textContent = state.stage === 'times' ? 'Confirm booking' : 'Choose a time'
     }
-    step.querySelectorAll('input').forEach((i) => {
+    step.querySelectorAll('input, .booking-calendar button').forEach((i) => {
       if (on) {
         i.dataset.wasDisabled = i.disabled ? '1' : '0'
         i.disabled = true
@@ -252,6 +267,21 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
         delete i.dataset.wasDisabled
       }
     })
+  }
+
+  function visitorTimeZone() {
+    return String(new FormData(form).get('timeZone') || detectTimeZone() || '').trim()
+  }
+
+  function updateZoneNote(day) {
+    const visitor = visitorTimeZone()
+    const sample = day?.slots?.[0]?.start
+    const when = sample ? new Date(sample) : new Date()
+    if (state.schedule?.timeZone) {
+      zoneNote.textContent = `Times are shown in ${zoneLabel(when, state.schedule.timeZone)}. Your timezone is ${visitor || 'unknown'}.`
+      return
+    }
+    zoneNote.textContent = `All times are Sydney time, ${sydneyZoneLabel(when)}. Your timezone is ${visitor || 'unknown'}.`
   }
 
   function resetTurnstile() {
@@ -298,13 +328,11 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
     const day = state.days.find((d) => d.date === state.date)
     timesBox.replaceChildren()
     state.slot = null
+    updateZoneNote(day)
     if (!day || !day.slots.length) {
-      timesHint.textContent = 'Choose a date to see available times.'
+      timesHint.textContent = 'Choose a date with available times on the calendar.'
       return
     }
-    zoneNote.textContent = state.schedule?.timeZone
-      ? `All times are ${zoneLabel(new Date(day.slots[0].start), state.schedule.timeZone)}.`
-      : `All times are Sydney time, ${sydneyZoneLabel(new Date(day.slots[0].start))}.`
     timesHint.textContent = `${day.slots.length} available ${day.slots.length === 1 ? 'time' : 'times'} on ${day.longLabel}.`
     for (const s of day.slots) {
       const local = localEquivalent(s.start, undefined, state.schedule?.timeZone)
@@ -321,30 +349,94 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
     }
   }
 
+  function monthHasAvailability(year, month) {
+    const prefix = `${year}-${String(month + 1).padStart(2, '0')}-`
+    return state.days.some((d) => d.available && d.date.startsWith(prefix))
+  }
+
+  function renderCalendar() {
+    if (!state.calendar) state.calendar = calendarMonthFromDays(state.days, state.date)
+    const { year, month } = state.calendar
+    const grid = buildCalendarMonth(year, month, state.days, state.date)
+    const prev = shiftCalendarMonth(year, month, -1)
+    const next = shiftCalendarMonth(year, month, 1)
+    const canPrev = monthHasAvailability(prev.year, prev.month) || state.days.some((d) => d.date.startsWith(`${prev.year}-${String(prev.month + 1).padStart(2, '0')}-`))
+    const canNext = monthHasAvailability(next.year, next.month) || state.days.some((d) => d.date.startsWith(`${next.year}-${String(next.month + 1).padStart(2, '0')}-`))
+
+    datesBox.replaceChildren()
+    const nav = el('div', { className: 'booking-cal-nav' })
+    const prevBtn = el('button', { type: 'button', className: 'btn btn--ghost btn--sm', 'aria-label': 'Previous month' }, 'Previous')
+    prevBtn.disabled = !canPrev
+    prevBtn.addEventListener('click', () => {
+      if (!canPrev) return
+      state.calendar = prev
+      renderCalendar()
+    })
+    const todayBtn = el('button', { type: 'button', className: 'btn btn--ghost btn--sm', 'aria-label': 'Go to today' }, 'Today')
+    todayBtn.addEventListener('click', () => {
+      state.calendar = calendarMonthFromDays(state.days, state.days[0]?.date)
+      const firstOpen = state.days.find((d) => d.available)
+      if (firstOpen) state.date = firstOpen.date
+      renderCalendar()
+      renderTimes()
+    })
+    const nextBtn = el('button', { type: 'button', className: 'btn btn--ghost btn--sm', 'aria-label': 'Next month' }, 'Next')
+    nextBtn.disabled = !canNext
+    nextBtn.addEventListener('click', () => {
+      if (!canNext) return
+      state.calendar = next
+      renderCalendar()
+    })
+    nav.append(prevBtn, todayBtn, nextBtn, el('h3', { className: 'booking-cal-title', id: 'bk-cal-title' }, grid.label))
+    datesBox.append(nav)
+
+    const week = el('div', { className: 'booking-cal-weekdays', 'aria-hidden': 'true' })
+    for (const name of grid.weekdays) week.append(el('span', {}, name))
+    datesBox.append(week)
+
+    const body = el('div', {
+      className: 'booking-cal-grid',
+      role: 'radiogroup',
+      'aria-labelledby': 'bk-date-label',
+      'aria-describedby': 'bk-cal-title',
+    })
+    for (const cell of grid.cells) {
+      const classes = ['booking-cal-day']
+      if (!cell.inMonth) classes.push('is-outside')
+      if (cell.available) classes.push('is-available')
+      if (cell.selected) classes.push('is-selected')
+      if (cell.disabled) classes.push('is-disabled')
+      const input = el('input', {
+        type: 'radio',
+        name: 'bookingDate',
+        value: cell.date,
+        disabled: cell.disabled,
+        checked: cell.selected,
+        'aria-label': `${cell.longLabel}${cell.closed ? ', closed' : cell.available ? `, ${cell.slots.length} times available` : ', no times available'}`,
+      })
+      if (!cell.disabled) {
+        input.addEventListener('change', () => {
+          state.date = cell.date
+          renderCalendar()
+          renderTimes()
+        })
+      }
+      const mark = cell.available ? el('span', { className: 'booking-cal-dot', 'aria-hidden': 'true' }) : null
+      body.append(
+        el('label', { className: classes.join(' ') }, input, el('span', { className: 'booking-cal-num' }, String(cell.day)), mark),
+      )
+    }
+    datesBox.append(body)
+  }
+
   function renderDates() {
     state.days = state.schedule
       ? buildMarketDateOptions(new Date(), state.slots, state.schedule)
       : buildDateOptions(new Date(), state.slots)
-    datesBox.replaceChildren()
     const firstOpen = state.days.find((d) => d.available)
     state.date = firstOpen ? firstOpen.date : null
-    for (const d of state.days) {
-      const unavailable = d.closed || !d.available
-      const input = el('input', {
-        type: 'radio',
-        name: 'bookingDate',
-        value: d.date,
-        disabled: unavailable,
-        checked: d.date === state.date,
-        'aria-label': `${d.longLabel}${d.closed ? ', closed' : !d.available ? ', no times available' : ''}`,
-      })
-      input.addEventListener('change', () => {
-        state.date = d.date
-        renderTimes()
-      })
-      const sub = d.closed ? 'Closed' : d.available ? `${d.slots.length} ${d.slots.length === 1 ? 'time' : 'times'}` : 'No times'
-      datesBox.append(el('label', { className: 'choice choice--center choice--stack' }, input, el('span', {}, el('b', {}, d.label), el('small', {}, sub))))
-    }
+    state.calendar = calendarMonthFromDays(state.days, state.date)
+    renderCalendar()
     renderTimes()
   }
 
