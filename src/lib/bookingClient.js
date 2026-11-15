@@ -106,14 +106,16 @@ export function buildCalendarMonth(year, month, dayOptions, selectedDate) {
     const day = byDate.get(key)
     const inMonth = utc.getUTCMonth() === month
     const available = Boolean(day?.available)
+    // Outside the displayed month stay disabled; navigate with Previous/Next to select them.
+    const disabled = !inMonth || !available
     cells.push({
       date: key,
       day: utc.getUTCDate(),
       inMonth,
       available,
       closed: Boolean(day?.closed),
-      disabled: !available,
-      selected: available && key === selectedDate,
+      disabled,
+      selected: !disabled && key === selectedDate,
       label: day?.label || shortDayLabel(utc),
       longLabel: day?.longLabel || utcLongFormat.format(utc),
       slots: day?.slots || [],
@@ -131,7 +133,19 @@ export function shiftCalendarMonth(year, month, delta) {
   return { year: next.getUTCFullYear(), month: next.getUTCMonth() }
 }
 
-/** Earliest month that intersects the booking horizon day list. */
+/** Calendar month for "now" in the visitor's timezone (month is 0–11). */
+export function calendarMonthForNow(now = new Date(), timeZone = SYDNEY) {
+  const { year, month } = ymdInZone(now, timeZone || SYDNEY)
+  return { year, month: month - 1 }
+}
+
+/** YYYY-MM-DD for an instant in the given timezone. */
+export function dateKeyInZone(now = new Date(), timeZone = SYDNEY) {
+  const { year, month, day } = ymdInZone(now, timeZone || SYDNEY)
+  return `${year}-${pad(month)}-${pad(day)}`
+}
+
+/** Month containing preferredDate when available; otherwise the first available horizon day. */
 export function calendarMonthFromDays(dayOptions, preferredDate) {
   const key = preferredDate && (dayOptions || []).some((d) => d.date === preferredDate && d.available)
     ? preferredDate

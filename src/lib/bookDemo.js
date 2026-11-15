@@ -5,9 +5,11 @@ import {
   buildCalendarMonth,
   buildDateOptions,
   buildMarketDateOptions,
+  calendarMonthForNow,
   calendarMonthFromDays,
   confirmationDetails,
   createBookingApi,
+  dateKeyInZone,
   formatSydneyTime,
   formatZoneTime,
   idempotencyKeyFor,
@@ -20,6 +22,7 @@ import {
   detectTimeZone,
   regionsForCountry,
   shiftCalendarMonth,
+  SYDNEY,
   timeZoneChoices,
   localEquivalent,
   sydneyZoneLabel,
@@ -374,9 +377,11 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
     })
     const todayBtn = el('button', { type: 'button', className: 'btn btn--ghost btn--sm', 'aria-label': 'Go to today' }, 'Today')
     todayBtn.addEventListener('click', () => {
-      state.calendar = calendarMonthFromDays(state.days, state.days[0]?.date)
-      const firstOpen = state.days.find((d) => d.available)
-      if (firstOpen) state.date = firstOpen.date
+      const zone = visitorTimeZone() || state.schedule?.timeZone || SYDNEY
+      const now = new Date()
+      state.calendar = calendarMonthForNow(now, zone)
+      const todayKey = dateKeyInZone(now, zone)
+      if (state.days.some((d) => d.date === todayKey && d.available)) state.date = todayKey
       renderCalendar()
       renderTimes()
     })
