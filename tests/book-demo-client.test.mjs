@@ -177,7 +177,7 @@ describe('API responses', () => {
   it('explains already_booked and rate_limited without a generic failure', () => {
     const booked = interpretBooking(409, { status: 'already_booked' })
     assert.equal(booked.kind, 'already_booked')
-    assert.match(booked.message, /already has a booking/i)
+    assert.match(booked.message, /already has an upcoming booking/i)
     assert.equal(/something went wrong/i.test(booked.message), false)
     const limited = interpretBooking(429, { status: 'rate_limited', retryAfterSeconds: 120 }, { 'Retry-After': '120' })
     assert.equal(limited.kind, 'retry_later')
