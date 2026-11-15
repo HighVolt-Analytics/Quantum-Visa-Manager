@@ -32,6 +32,8 @@ const KNOWN_ANSWER_KEYS = new Set([
   'email',
   'phone',
   'org',
+  'address',
+  'specialRequests',
   'state',
   'country',
   'countryCode',
@@ -59,21 +61,48 @@ export function validateV2Booking(body) {
   const slotStart = check('slotStart', text(body.slotStart, { required: true, max: 40 }))
   const timeZone = isValidTimeZone(body.timeZone) ? body.timeZone.trim() : (errors.push('timeZone'), undefined)
   const turnstileToken = check('turnstileToken', text(body.turnstileToken, { required: true, max: 2048 }))
+  // HighVolt demo bookings use name/email/address/phone/special requests, not the
+  // product-site questionnaire. Other non-QVM sites keep their required practice fields.
+  const isHva = site === 'hva'
   const answers = {
-    size: check('size', site === 'qvm' ? choice(a.size, OPTIONS.size) : text(a.size, { required: true, max: 200 })),
-    system: check('system', site === 'qvm' ? choice(a.system, OPTIONS.system) : text(a.system, { required: true, max: 200 })),
+    size: check(
+      'size',
+      site === 'qvm'
+        ? choice(a.size, OPTIONS.size)
+        : text(a.size, { required: !isHva, max: 200 }),
+    ),
+    system: check(
+      'system',
+      site === 'qvm'
+        ? choice(a.system, OPTIONS.system)
+        : text(a.system, { required: !isHva, max: 200 }),
+    ),
     systemName: check('systemName', text(a.systemName, { required: false, max: 120 })),
-    bottleneck: check('bottleneck', site === 'qvm' ? choice(a.bottleneck, OPTIONS.bottleneck) : text(a.bottleneck, { required: true, max: 500 })),
+    bottleneck: check(
+      'bottleneck',
+      site === 'qvm'
+        ? choice(a.bottleneck, OPTIONS.bottleneck)
+        : text(isHva ? (a.specialRequests || a.bottleneck) : a.bottleneck, { required: !isHva, max: 500 }),
+    ),
     first: check('first', text(a.first, { required: true, max: 80 })),
     last: check('last', text(a.last, { required: true, max: 80 })),
     email: check('email', text(a.email, { required: true, max: 254 })),
     phone: check('phone', text(a.phone, { required: false, max: 32 })),
-    org: check('org', text(a.org, { required: true, max: 120 })),
+    org: check('org', text(a.org, { required: !isHva, max: 120 })),
+    address: '',
+    specialRequests: '',
     state: '',
     country: '',
     countryCode: '',
     partner: a.partner === true,
     consent: false,
+  }
+  if (isHva) {
+    answers.address = check('address', text(a.address, { required: false, max: 200 }))
+    answers.specialRequests = check('specialRequests', text(a.specialRequests || a.bottleneck, { required: false, max: 500 }))
+    if (!answers.size) answers.size = 'HighVolt demo'
+    if (!answers.system) answers.system = 'HighVolt demo'
+    if (!answers.org) answers.org = answers.address || 'HighVolt demo'
   }
   const country = resolveCountry(a.country)
   if (!country) errors.push('country')

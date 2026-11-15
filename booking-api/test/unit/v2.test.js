@@ -125,6 +125,41 @@ test('v2 validation stores consent and keeps extra submitted answer fields', () 
   assert.equal(ok.value.answers.channelPreference, 'WhatsApp')
   assert.equal(ok.value.answers.country, 'Australia')
 
+  const hva = validateV2Booking({
+    site: 'hva',
+    idempotencyKey: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    slotStart: '2026-11-08T22:00:00.000Z',
+    timeZone: 'Australia/Sydney',
+    turnstileToken: 'token',
+    answers: {
+      first: 'Ada',
+      last: 'Lovelace',
+      email: 'ada@example.test',
+      phone: '+61 400 000 000',
+      address: '1 Demo Street',
+      specialRequests: 'Focus on finance automation',
+      country: 'Australia',
+      consent: true,
+    },
+  })
+  assert.equal(hva.ok, true)
+  assert.equal(hva.value.answers.address, '1 Demo Street')
+  assert.equal(hva.value.answers.specialRequests, 'Focus on finance automation')
+  assert.equal(hva.value.answers.bottleneck, 'Focus on finance automation')
+  assert.equal(hva.value.answers.size, 'HighVolt demo')
+  assert.equal(hva.value.answers.org, '1 Demo Street')
+  const hvaMissingName = validateV2Booking({
+    site: 'hva',
+    idempotencyKey: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+    slotStart: '2026-11-08T22:00:00.000Z',
+    timeZone: 'Australia/Sydney',
+    turnstileToken: 'token',
+    answers: { email: 'ada@example.test', country: 'Australia', consent: true },
+  })
+  assert.equal(hvaMissingName.ok, false)
+  assert.ok(hvaMissingName.errors.includes('first'))
+  assert.ok(hvaMissingName.errors.includes('last'))
+
   const qvm = validateV2Booking({
     ...base,
     site: 'qvm',
