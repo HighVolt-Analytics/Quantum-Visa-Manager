@@ -340,7 +340,10 @@ export class SqlSiteStore {
       }
     }
     if (row.slot_key) return this.slotEntity(row)
-    if (row.email_hash) {
+    // Bookings also store email_hash / request_hash. Classify email and idempotency
+    // rows only when booking fields (time_zone) are absent; otherwise staff get and
+    // post-createAll reload return a booking without site and patch throws TypeError.
+    if (row.email_hash && !row.time_zone) {
       return {
         partitionKey: this.site,
         rowKey: `email_${row.email_hash}`,

@@ -199,8 +199,8 @@ export function makeV2BookingsHandler(getResources, env = () => process.env) {
       const matched = SITES.find((id) => siteOrigins(cfg, id).includes(origin))
       return corsPreflight(origin, matched ? siteOrigins(cfg, matched) : [])
     }
+    let body
     try {
-      let body
       try { body = await request.json() } catch { return json(400, { status: 'invalid', fields: ['body'] }) }
       const site = body?.site || ''
       const allowed = siteOrigins(cfg, site)
@@ -213,7 +213,14 @@ export function makeV2BookingsHandler(getResources, env = () => process.env) {
       const result = await service.create({ body, origin, ip: clientIp(request) })
       return respond(result.httpStatus, result.body)
     } catch (err) {
-      log.error('v2_booking_error', { code: errorCode(err) })
+      const site = err?.site || (typeof body?.site === 'string' ? body.site : undefined)
+      log.error('v2_booking_error', {
+        code: errorCode(err),
+        errorType: err?.name || 'Error',
+        bookingId: err?.bookingId,
+        site,
+        stage: err?.stage,
+      })
       // Origin may be allowed for a site even when create throws; echo CORS only if it matches a site list.
       const matched = SITES.find((id) => siteOrigins(cfg, id).includes(origin))
       return v2PublicReply(json(500, { status: 'error' }), origin, matched ? siteOrigins(cfg, matched) : [])
