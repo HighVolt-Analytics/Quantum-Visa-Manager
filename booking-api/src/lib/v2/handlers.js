@@ -330,6 +330,59 @@ export function makeV2MicrosoftBookingsHandler(getResources, env = () => process
   }
 }
 
+/**
+ * Staff-only read of whether a v2 calendar event exists for a booking id.
+ * Uses the same findByBooking Graph lookup as ensureMeeting. Does not create events,
+ * send mail, or read/write SQL.
+ */
+export function makeV2MeetingLookupHandler(getResources, env = () => process.env) {
+  return async (request, context) => {
+    const log = createLogger(context)
+    const bookingId = request.params?.bookingId || ''
+    try {
+      const cfg = readV2Config(env())
+      const denied = staffUnauthorized(request, cfg)
+      if (denied) return denied
+      if (!/^[0-9a-f-]{36}$/i.test(bookingId)) return json(400, { status: 'invalid', fields: ['bookingId'] })
+      const resources = getResources()
+      const calendar = resources.v2Calendar || (resources.getToken ? graphClient(resources.getToken) : null)
+      if (!calendar?.findByBooking) {
+        return json(503, { status: 'unconfigured', missing: ['AZURE_CLIENT_ID'] })
+      }
+      log.info('v2_meeting_lookup', { bookingId, stage: 'find_by_booking' })
+      try {
+        const rows = await calendar.findByBooking(cfg.organizerMailbox, bookingId)
+        const live = (rows || []).filter((event) => !event.isCancelled)
+        return json(200, {
+          status: 'ok',
+          found: live.length > 0,
+          httpStatus: 200,
+          graphCode: '',
+        })
+      } catch (err) {
+        if (err instanceof GraphError) {
+          log.error('v2_meeting_lookup_error', {
+            bookingId,
+            stage: 'find_by_booking',
+            code: errorCode(err),
+            httpStatus: err.status || 0,
+          })
+          return json(200, {
+            status: 'graph_error',
+            found: false,
+            httpStatus: err.status || 0,
+            graphCode: String(err.code || 'error'),
+          })
+        }
+        throw err
+      }
+    } catch (err) {
+      log.error('v2_meeting_lookup_error', { bookingId, stage: 'handler', code: errorCode(err) })
+      return json(500, { status: 'error' })
+    }
+  }
+}
+
 /** Reads an existing v1 private note. Does not create or update calendar events. */
 export function makeV2LegacyNoteHandler(getResources, env = () => process.env) {
   return async (request, context) => {

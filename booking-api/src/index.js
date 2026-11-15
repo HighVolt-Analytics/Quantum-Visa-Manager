@@ -3,7 +3,7 @@ import { makeAvailabilityHandler } from './functions/availability.js'
 import { makeBookingsHandler } from './functions/bookings.js'
 import { makeDiagnosticsHandler } from './functions/diagnostics.js'
 import { makeReconcileHandler } from './functions/reconcile.js'
-import { makeV2AvailabilityHandler, makeV2BookingsHandler, makeV2LegacyNoteHandler, makeV2MicrosoftBookingsHandler, makeV2ReconcileHandler, makeV2StaffDetailHandler, makeV2StaffHandler } from './lib/v2/handlers.js'
+import { makeV2AvailabilityHandler, makeV2BookingsHandler, makeV2LegacyNoteHandler, makeV2MeetingLookupHandler, makeV2MicrosoftBookingsHandler, makeV2ReconcileHandler, makeV2StaffDetailHandler, makeV2StaffHandler } from './lib/v2/handlers.js'
 import { getDiagnosticsDeps, getRuntime, getSharedResources } from './runtime.js'
 
 const runtime = () => getRuntime()
@@ -77,6 +77,13 @@ app.http('v2MicrosoftBookings', {
   authLevel: 'anonymous',
   route: 'v2/staff/microsoft-bookings',
   handler: makeV2MicrosoftBookingsHandler(resources),
+})
+
+app.http('v2MeetingLookup', {
+  methods: ['GET'],
+  authLevel: 'anonymous',
+  route: 'v2/staff/meeting-lookup/{bookingId}',
+  handler: makeV2MeetingLookupHandler(resources),
 })
 
 app.http('v2LegacyNote', {
