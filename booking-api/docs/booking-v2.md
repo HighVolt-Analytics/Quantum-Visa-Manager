@@ -31,6 +31,7 @@ The visitor selects a country from the ISO 3166-1 list (plus Kosovo). The server
 - `send_unconfirmed` (timeout, HTTP 429, or HTTP 5xx, or a claim that expired) is not retried.
 - A definite Graph rejection of mail can be retried until five attempts.
 - A definite meeting failure sets the booking to `RELEASED` and deletes the visitor email claim, the person locks, and the Arup slot holds.
+- Email claims enforce one active/upcoming booking per visitor email per site. After the slot ends, or when the booking is `RELEASED`/failed, reconcile (and create-time reclaim) delete only the email claim so the visitor can book again. Booking rows and event history stay in place. Claims stay independent across the five site databases.
 
 Staff mail contains the site, market, time, reference, visitor name, organisation, and a portal link. It does not contain the questionnaire.
 

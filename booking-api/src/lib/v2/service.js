@@ -249,23 +249,44 @@ export class V2BookingService {
       staffNotify: JSON.stringify(notify),
       createdAt: this.now().toISOString(),
     }
+    const emailClaim = { partitionKey: site, rowKey: `email_${emailHash}`, kind: 'email', bookingId, slotStart: slot.start }
+    const requestRow = { partitionKey: site, rowKey: `req_${requestHash}`, kind: 'request', bookingId, requestHash, fingerprint }
     try {
-      await store.createAll(V2_BOOKINGS_TABLE, [
-        { partitionKey: site, rowKey: `req_${requestHash}`, kind: 'request', bookingId, requestHash, fingerprint },
-        { partitionKey: site, rowKey: `email_${emailHash}`, kind: 'email', bookingId, slotStart: slot.start },
-        booking,
-      ])
+      await store.createAll(V2_BOOKINGS_TABLE, [requestRow, emailClaim, booking])
     } catch (err) {
-      await this.releaseHold(site, bookingId)
       if (err instanceof ConflictError) {
         const request = await store.get(V2_BOOKINGS_TABLE, site, `req_${requestHash}`)
-        if (request) return this.replay(site, request, fingerprint)
-        return reply(409, {
-          status: 'already_booked',
-          message: `This email already has a booking for this site. To change it, reply to your invitation or email ${CONTACT}.`,
-        })
+        if (request) {
+          await this.releaseHold(site, bookingId)
+          return this.replay(site, request, fingerprint)
+        }
+        const freed = await this.releaseEmailClaimIfInactive(site, emailHash)
+        if (freed.released) {
+          try {
+            await store.createAll(V2_BOOKINGS_TABLE, [requestRow, emailClaim, booking])
+          } catch (retryErr) {
+            await this.releaseHold(site, bookingId)
+            if (retryErr instanceof ConflictError) {
+              const again = await store.get(V2_BOOKINGS_TABLE, site, `req_${requestHash}`)
+              if (again) return this.replay(site, again, fingerprint)
+              return reply(409, {
+                status: 'already_booked',
+                message: `This email already has an upcoming booking for this site. To change it, reply to your invitation or email ${CONTACT}.`,
+              })
+            }
+            throw retryErr
+          }
+        } else {
+          await this.releaseHold(site, bookingId)
+          return reply(409, {
+            status: 'already_booked',
+            message: `This email already has an upcoming booking for this site. To change it, reply to your invitation or email ${CONTACT}.`,
+          })
+        }
+      } else {
+        await this.releaseHold(site, bookingId)
+        throw err
       }
-      throw err
     }
     let stage = 'load_booking'
     try {
@@ -414,6 +435,32 @@ export class V2BookingService {
     const rowKey = `email_${booking.emailHash}`
     const row = await store.get(V2_BOOKINGS_TABLE, booking.site, rowKey)
     if (row?.bookingId === booking.bookingId) await store.delete(V2_BOOKINGS_TABLE, booking.site, rowKey, row.etag).catch(() => {})
+  }
+
+  /**
+   * One active/upcoming booking per email per site. Past-end and RELEASED/failed bookings
+   * do not keep the claim; booking history rows stay in place.
+   */
+  emailClaimStillActive(booking, now = this.now()) {
+    if (!booking || (booking.kind && booking.kind !== 'booking')) return false
+    if (booking.state === 'RELEASED' || booking.meetingStatus === 'failed') return false
+    const end = Date.parse(booking.slotEnd || 0)
+    if (!Number.isFinite(end) || end <= now.getTime()) return false
+    return true
+  }
+
+  /** Deletes a stale email claim only when it no longer blocks a new booking. Never deletes booking rows. */
+  async releaseEmailClaimIfInactive(site, emailHash, now = this.now()) {
+    const store = this.siteStore(site)
+    if (!store || !emailHash) return { released: false }
+    const rowKey = `email_${emailHash}`
+    const claim = await store.get(V2_BOOKINGS_TABLE, site, rowKey)
+    if (!claim) return { released: false }
+    const booking = claim.bookingId ? await store.get(V2_BOOKINGS_TABLE, site, `bkg_${claim.bookingId}`) : null
+    if (this.emailClaimStillActive(booking, now)) return { released: false, booking }
+    if (booking?.emailHash) await this.releaseEmail(booking)
+    else await store.delete(V2_BOOKINGS_TABLE, site, rowKey, claim.etag).catch(() => {})
+    return { released: true, booking }
   }
 
   /** Frees this site's slot claim and the visitor email after a definite failure. v1 rows are left in place. */
@@ -663,7 +710,7 @@ export class V2BookingService {
     }
   }
 
-  /** Releases expired holds, adopts a confirmed calendar event, and never resends an uncertain email. */
+  /** Releases expired holds, frees inactive email claims, adopts a confirmed calendar event, and never resends an uncertain email. */
   async reconcile() {
     const now = this.now()
     for (const site of V2_SITES) {
@@ -671,12 +718,16 @@ export class V2BookingService {
       if (!store) continue
       try {
         await this.sweepSiteSlots(site, now)
+        await this.sweepEmailClaims(site, now)
         for await (const row of store.list(V2_BOOKINGS_TABLE, site, 'bkg_', 'bkg`')) {
           if (row.kind && row.kind !== 'booking') continue
           if (row.state === 'RELEASED' || row.meetingStatus === 'failed') {
             await this.releaseEmail(row)
             await this.releaseHold(site, row.bookingId)
             continue
+          }
+          if (!this.emailClaimStillActive(row, now)) {
+            await this.releaseEmail(row)
           }
           if (!['create_unconfirmed', 'creating', 'pending'].includes(row.meetingStatus)) continue
           const age = now.getTime() - Date.parse(row.createdAt || 0)
@@ -693,6 +744,17 @@ export class V2BookingService {
       } catch (err) {
         this.log.error('v2_reconcile_site_failed', { site, code: err?.code || 'unavailable' })
       }
+    }
+  }
+
+  /** Drops email claims that no longer represent an upcoming booking. Booking history is preserved. */
+  async sweepEmailClaims(site, now) {
+    const store = this.siteStore(site)
+    if (!store) return
+    for await (const row of store.list(V2_BOOKINGS_TABLE, site, 'email_', 'email`')) {
+      if (row.kind && row.kind !== 'email') continue
+      const emailHash = row.emailHash || String(row.rowKey || '').replace(/^email_/, '')
+      await this.releaseEmailClaimIfInactive(site, emailHash, now)
     }
   }
 

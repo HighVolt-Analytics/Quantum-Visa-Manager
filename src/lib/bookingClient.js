@@ -328,7 +328,7 @@ export function interpretBooking(httpStatus, body, headers) {
         kind: 'already_booked',
         message:
           message ||
-          `This email already has a booking for this site. To change it, reply to your invitation or email ${CONTACT}.`,
+          `This email already has an upcoming booking for this site. To change it, reply to your invitation or email ${CONTACT}.`,
       }
     case 'idempotency_conflict':
       return { kind: 'new_attempt', message: 'Please choose your time again and resubmit.' }

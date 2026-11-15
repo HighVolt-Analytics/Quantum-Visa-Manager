@@ -426,6 +426,83 @@ test('a definite meeting failure releases the visitor email claim', async () => 
   assert.equal(events.length, 1)
 })
 
+test('a second future booking for the same email on the same site is already_booked', async () => {
+  const { service, store, events } = harness()
+  const first = await service.create({ body: body('agent'), ip: '127.0.0.1' })
+  assert.equal(first.httpStatus, 200)
+  const later = candidateSlots(schedule, now).find((item) => item.start !== slot.start)
+  assert.ok(later)
+  const second = await service.create({
+    body: body('agent', {
+      idempotencyKey: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      slotStart: later.start,
+    }),
+    ip: '127.0.0.1',
+  })
+  assert.equal(second.httpStatus, 409)
+  assert.equal(second.body.status, 'already_booked')
+  assert.match(second.body.message, /upcoming booking/i)
+  assert.equal(events.length, 1)
+  const bookings = []
+  for await (const row of store.list(V2_BOOKINGS_TABLE, 'agent', 'bkg_', 'bkg`')) bookings.push(row)
+  assert.equal(bookings.filter((row) => row.kind === 'booking').length, 1)
+})
+
+test('rebooking is allowed after the previous slot ends while history remains', async () => {
+  const { service, store, events } = harness()
+  const first = await service.create({ body: body('agent'), ip: '127.0.0.1' })
+  assert.equal(first.httpStatus, 200)
+  const stored = [...store.table(V2_BOOKINGS_TABLE).values()].find((row) => row.kind === 'booking' && row.partitionKey === 'agent')
+  assert.ok(stored)
+  await store.update(
+    V2_BOOKINGS_TABLE,
+    {
+      partitionKey: 'agent',
+      rowKey: stored.rowKey,
+      slotStart: '2026-11-01T00:00:00.000Z',
+      slotEnd: '2026-11-01T00:30:00.000Z',
+    },
+    stored.etag,
+  )
+  const later = candidateSlots(schedule, now).find((item) => item.start !== slot.start) || slot
+  const second = await service.create({
+    body: body('agent', {
+      idempotencyKey: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      slotStart: later.start,
+    }),
+    ip: '127.0.0.1',
+  })
+  assert.equal(second.httpStatus, 200)
+  assert.equal(events.length, 2)
+  const bookings = [...store.table(V2_BOOKINGS_TABLE).values()].filter((row) => row.kind === 'booking' && row.partitionKey === 'agent')
+  assert.equal(bookings.length, 2)
+  assert.ok(bookings.some((row) => row.rowKey === stored.rowKey))
+})
+
+test('rebooking is allowed after cancellation releases the email claim', async () => {
+  const { service, store, events } = harness()
+  const first = await service.create({ body: body('agent'), ip: '127.0.0.1' })
+  assert.equal(first.httpStatus, 200)
+  const stored = [...store.table(V2_BOOKINGS_TABLE).values()].find((row) => row.kind === 'booking' && row.partitionKey === 'agent')
+  assert.ok(stored)
+  await service.releaseBooking(stored)
+  const kept = await store.get(V2_BOOKINGS_TABLE, 'agent', stored.rowKey)
+  assert.equal(kept.state, 'RELEASED')
+  const later = candidateSlots(schedule, now).find((item) => item.start !== slot.start) || slot
+  const second = await service.create({
+    body: body('agent', {
+      idempotencyKey: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+      slotStart: later.start,
+    }),
+    ip: '127.0.0.1',
+  })
+  assert.equal(second.httpStatus, 200)
+  assert.equal(events.length, 2)
+  const bookings = [...store.table(V2_BOOKINGS_TABLE).values()].filter((row) => row.kind === 'booking' && row.partitionKey === 'agent')
+  assert.equal(bookings.length, 2)
+  assert.ok(bookings.some((row) => row.state === 'RELEASED'))
+})
+
 test('create_unconfirmed is adopted by lookup and is not created again', async () => {
   const { service, events, sent } = harness()
   service.calendar.createEvent = async () => {
