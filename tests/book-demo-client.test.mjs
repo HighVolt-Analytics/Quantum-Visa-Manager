@@ -5,8 +5,13 @@ import {
   CONTACT,
   COMMON_TIME_ZONES,
   buildBookingPayload,
+  buildCalendarMonth,
   buildDateOptions,
+  calendarMonthForNow,
+  calendarMonthFromDays,
   confirmationDetails,
+  dateKeyInZone,
+  shiftCalendarMonth,
   createBookingApi,
   detectTimeZone,
   formatSydneyTime,
@@ -54,6 +59,43 @@ describe('date picker', () => {
   it('uses the Sydney date, not the visitor date, near midnight UTC', () => {
     const late = buildDateOptions(new Date('2026-10-25T14:00:00Z'), []) // 01:00 Monday in Sydney, Sunday in UTC
     assert.equal(late[0].date, '2026-10-26')
+  })
+
+  it('builds a month grid that enables only in-month horizon days with availability', () => {
+    const month = calendarMonthFromDays(days, '2026-10-27')
+    assert.deepEqual(month, { year: 2026, month: 9 })
+    const grid = buildCalendarMonth(2026, 9, days, '2026-10-27')
+    assert.equal(grid.label, 'October 2026')
+    assert.equal(grid.weekdays[0], 'Mon')
+    assert.equal(grid.cells.length, 42)
+    const open = grid.cells.find((c) => c.date === '2026-10-27')
+    assert.equal(open.available, true)
+    assert.equal(open.selected, true)
+    assert.equal(open.disabled, false)
+    const saturday = grid.cells.find((c) => c.date === '2026-10-31')
+    assert.equal(saturday.disabled, true)
+    const outside = grid.cells.find((c) => !c.inMonth)
+    assert.ok(outside)
+    assert.equal(outside.disabled, true)
+    assert.deepEqual(shiftCalendarMonth(2026, 9, 1), { year: 2026, month: 10 })
+  })
+
+  it('disables available days that fall outside the displayed month', () => {
+    const nov = buildCalendarMonth(2026, 10, days, '2026-10-27')
+    const spill = nov.cells.find((c) => c.date === '2026-10-27')
+    assert.ok(spill)
+    assert.equal(spill.inMonth, false)
+    assert.equal(spill.available, true)
+    assert.equal(spill.disabled, true)
+    assert.equal(spill.selected, false)
+  })
+
+  it('resolves Today to the current month in the visitor timezone', () => {
+    const instant = new Date('2026-11-15T20:00:00Z')
+    assert.deepEqual(calendarMonthForNow(instant, 'Australia/Sydney'), { year: 2026, month: 10 })
+    assert.equal(dateKeyInZone(instant, 'Australia/Sydney'), '2026-11-16')
+    assert.deepEqual(calendarMonthForNow(instant, 'America/Los_Angeles'), { year: 2026, month: 10 })
+    assert.equal(dateKeyInZone(instant, 'America/Los_Angeles'), '2026-11-15')
   })
 })
 
