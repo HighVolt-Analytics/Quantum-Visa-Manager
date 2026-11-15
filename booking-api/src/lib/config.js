@@ -19,7 +19,8 @@ export const NOTE_PROPERTY_ID = 'String {0b9c5e72-3f4a-4d61-9a8e-5c2f7d1e4b30} N
 
 export const RATE_LIMITS = Object.freeze({
   availability: { limit: 30, windowMs: 10 * 60 * 1000 },
-  booking: { limit: 5, windowMs: 60 * 60 * 1000 },
+  // Shared default for v1 and all v2 sites (no per-site override). Raised from 5 to ease repeat testing.
+  booking: { limit: 10, windowMs: 60 * 60 * 1000 },
 })
 
 export const DEFAULT_ALLOWED_ORIGINS = Object.freeze([

@@ -288,10 +288,33 @@ export const withBookingContact = (message) => String(message || '').replace(/[A
 
 const fallback = (message) => withBookingContact(message) || `Something went wrong. Please try again or email ${CONTACT}.`
 
+function retryAfterFrom(body, headers) {
+  const fromBody = Number(body?.retryAfterSeconds)
+  if (Number.isFinite(fromBody) && fromBody > 0) return Math.ceil(fromBody)
+  const fromHeader = Number(headers?.['retry-after'] || headers?.['Retry-After'])
+  if (Number.isFinite(fromHeader) && fromHeader > 0) return Math.ceil(fromHeader)
+  return undefined
+}
+
+function formatRetryHint(seconds) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return 'a little later'
+  if (seconds < 60) return `about ${seconds} second${seconds === 1 ? '' : 's'}`
+  const minutes = Math.ceil(seconds / 60)
+  if (minutes < 60) return `about ${minutes} minute${minutes === 1 ? '' : 's'}`
+  const hours = Math.ceil(minutes / 60)
+  return `about ${hours} hour${hours === 1 ? '' : 's'}`
+}
+
+function rateLimitedMessage(message, retryAfterSeconds) {
+  if (message) return message
+  return `Too many attempts were made from this connection. Please wait ${formatRetryHint(retryAfterSeconds)} and try again. This is a temporary limit, not a connection failure.`
+}
+
 /** Maps a booking API response to what the page should do next. Never invents a confirmation. */
-export function interpretBooking(httpStatus, body) {
+export function interpretBooking(httpStatus, body, headers) {
   const b = body && typeof body === 'object' ? body : {}
   const message = typeof b.message === 'string' ? withBookingContact(b.message) : ''
+  const retryAfterSeconds = retryAfterFrom(b, headers)
   if (httpStatus === 200 && b.status === 'confirmed' && b.slot?.start && b.reference) {
     return { kind: 'confirmed', reference: b.reference, slot: b.slot, message }
   }
@@ -301,7 +324,12 @@ export function interpretBooking(httpStatus, body) {
     case 'slot_unavailable':
       return { kind: 'slot_gone', message: message || 'That time is no longer available. Please choose another.' }
     case 'already_booked':
-      return { kind: 'already_booked', message: fallback(message) }
+      return {
+        kind: 'already_booked',
+        message:
+          message ||
+          `This email already has a booking for this site. To change it, reply to your invitation or email ${CONTACT}.`,
+      }
     case 'idempotency_conflict':
       return { kind: 'new_attempt', message: 'Please choose your time again and resubmit.' }
     case 'invalid':
@@ -309,7 +337,7 @@ export function interpretBooking(httpStatus, body) {
     case 'verification_failed':
       return { kind: 'verification', message: 'The security check expired or failed. Please complete it again.' }
     case 'rate_limited':
-      return { kind: 'retry_later', message: fallback(message) }
+      return { kind: 'retry_later', message: rateLimitedMessage(message, retryAfterSeconds), retryAfterSeconds }
     case 'unavailable':
       return { kind: 'unavailable', message: fallback(message) }
     default:
@@ -317,7 +345,7 @@ export function interpretBooking(httpStatus, body) {
   }
 }
 
-export function interpretAvailability(httpStatus, body) {
+export function interpretAvailability(httpStatus, body, headers) {
   const b = body && typeof body === 'object' ? body : {}
   if (httpStatus === 200 && b.status === 'ok' && Array.isArray(b.slots)) {
     const result = { kind: 'ok', slots: b.slots }
@@ -327,7 +355,10 @@ export function interpretAvailability(httpStatus, body) {
     return result
   }
   if (b.status === 'unavailable') return { kind: 'unavailable', message: fallback(b.message) }
-  if (b.status === 'rate_limited') return { kind: 'retry_later', message: fallback(b.message) }
+  if (b.status === 'rate_limited') {
+    const retryAfterSeconds = retryAfterFrom(b, headers)
+    return { kind: 'retry_later', message: rateLimitedMessage(withBookingContact(b.message), retryAfterSeconds), retryAfterSeconds }
+  }
   return { kind: 'error', message: fallback(b.message) }
 }
 
@@ -347,6 +378,8 @@ export function createBookingApi({ baseUrl, v2BaseUrl, fetchImpl = (...a) => fet
       } catch {
         body = null
       }
+      const retryAfter = res.headers?.get?.('Retry-After') || res.headers?.get?.('retry-after')
+      if (retryAfter) return { httpStatus: res.status, body, headers: { 'Retry-After': retryAfter } }
       return { httpStatus: res.status, body }
     } catch {
       return { network: true }

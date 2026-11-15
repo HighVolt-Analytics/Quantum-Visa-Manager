@@ -11,12 +11,18 @@ import { MAIL, initialNotify, mailAction, staffMailBody, summarizeNotify } from 
 import { withEmails, recipientsFor } from './roster.js'
 import { candidateSlots, findSlot, slotLabel, visitorSchedule } from './schedule.js'
 import { validateV2Booking } from './validation.js'
+import { CONTACT, rateLimitedResponse } from '../http.js'
 import { errorCode } from '../log.js'
 
 const V2_PROPERTY_ID = 'String {6c1a9e40-2b7d-4f5a-8c31-9d0e4a7b2c18} Name HvBookingV2Id'
 const V2_SITES = ['hva', 'agent', 'qvm', 'ledgerline', 'edupass']
 
-const reply = (httpStatus, body) => ({ httpStatus, body })
+const reply = (httpStatus, body, headers) => (headers ? { httpStatus, body, headers } : { httpStatus, body })
+
+function rateLimitedReply(retryAfterSeconds) {
+  const res = rateLimitedResponse(retryAfterSeconds)
+  return reply(res.status, res.jsonBody, res.headers)
+}
 
 function elapsedMs(started) {
   return Math.max(0, Date.now() - started)
@@ -49,21 +55,21 @@ export class V2BookingService {
   /** Runs before any Graph call. A missing hash key still limits, using a one-way digest of the IP. */
   async rateLimited(site, scope, ip) {
     const store = this.siteStore(site)
-    if (!store) return false
+    if (!store) return { limited: false }
     const now = this.now()
     const day = now.toISOString().slice(0, 10)
     const subject = this.cfg.hashKey
       ? hmacHex(this.cfg.hashKey, `v2:${scope}:${day}:${ip}`).slice(0, 32)
       : sha256Hex(`v2:${scope}:${day}:${ip}`).slice(0, 32)
-    const { allowed } = await consumeRateLimit(store, {
+    const result = await consumeRateLimit(store, {
       scope: `v2-${scope}`,
       subject,
       ...this.limits(scope),
       now,
       table: V2_RATELIMITS_TABLE,
     })
-    if (!allowed) this.log.warn('v2_rate_limited', { reason: scope, site })
-    return !allowed
+    if (!result.allowed) this.log.warn('v2_rate_limited', { reason: scope, site })
+    return { limited: !result.allowed, retryAfterSeconds: result.retryAfterSeconds }
   }
 
   /**
@@ -93,9 +99,10 @@ export class V2BookingService {
     if (!store) return reply(503, { status: 'unconfigured', missing: [siteStorageSetting(site)] })
     try {
       const rateStarted = Date.now()
-      if (await this.rateLimited(site, 'availability', ip || 'unknown')) {
+      const availabilityLimit = await this.rateLimited(site, 'availability', ip || 'unknown')
+      if (availabilityLimit.limited) {
         this.log.info('v2_availability_stage', { site, stage: 'rate_limit', durationMs: elapsedMs(rateStarted), status: 'limited' })
-        return reply(429, { status: 'rate_limited', message: 'Too many requests. Please try again shortly.' })
+        return rateLimitedReply(availabilityLimit.retryAfterSeconds)
       }
       this.log.info('v2_availability_stage', { site, stage: 'rate_limit', durationMs: elapsedMs(rateStarted) })
 
@@ -176,8 +183,9 @@ export class V2BookingService {
     const slot = findSlot(schedule, slotStart, this.now())
     if (!slot) return reply(422, { status: 'slot_unavailable' })
 
-    if (await this.rateLimited(site, 'booking', ip || 'unknown')) {
-      return reply(429, { status: 'rate_limited', message: 'Too many requests. Please try again shortly.' })
+    const bookingLimit = await this.rateLimited(site, 'booking', ip || 'unknown')
+    if (bookingLimit.limited) {
+      return rateLimitedReply(bookingLimit.retryAfterSeconds)
     }
 
     const emailed = withEmails(recipientsFor(site, market), this.cfg.emails)
@@ -252,7 +260,10 @@ export class V2BookingService {
       if (err instanceof ConflictError) {
         const request = await store.get(V2_BOOKINGS_TABLE, site, `req_${requestHash}`)
         if (request) return this.replay(site, request, fingerprint)
-        return reply(409, { status: 'already_booked' })
+        return reply(409, {
+          status: 'already_booked',
+          message: `This email already has a booking for this site. To change it, reply to your invitation or email ${CONTACT}.`,
+        })
       }
       throw err
     }
