@@ -46,7 +46,6 @@ export function privateNotePayload(booking, answers) {
     `Work email: ${answers.email}`,
     `Phone: ${answers.phone || 'not given'}`,
     `Practice or company: ${answers.org}`,
-    `State or territory: ${answers.state}`,
     `Practice size: ${answers.size}`,
     `Current system: ${answers.system}${answers.systemName ? ` (${answers.systemName})` : ''}`,
     `Biggest bottleneck: ${answers.bottleneck}`,

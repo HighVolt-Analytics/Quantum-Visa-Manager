@@ -22,8 +22,8 @@ describe('booking request validation', () => {
   })
 
   it('rejects values outside the form options', () => {
-    const result = validateBookingRequest(bookingBody({ answers: { size: '100+', state: 'Mars', bottleneck: 'x', system: 'y' } }))
-    assert.deepEqual(result.errors.sort(), ['bottleneck', 'size', 'state', 'system'])
+    const result = validateBookingRequest(bookingBody({ answers: { size: '100+', bottleneck: 'x', system: 'y' } }))
+    assert.deepEqual(result.errors.sort(), ['bottleneck', 'size', 'system'])
   })
 
   it('rejects bad email, phone, idempotency key and oversized or control-character text', () => {

@@ -110,11 +110,9 @@ export function validateV2Booking(body) {
     answers.country = country.name
     answers.countryCode = country.code
   }
-  if (site === 'qvm') {
-    // Australia keeps the existing territory list; other countries send a free-text region.
-    answers.state = country?.code === 'AU'
-      ? check('state', choice(a.state, OPTIONS.state))
-      : check('state', text(a.state, { required: true, max: 80 }))
+  if (site === 'qvm' && country?.code === 'AU' && a.state) {
+    // Region is optional on the form; AU values still use the territory list when present.
+    answers.state = check('state', choice(a.state, OPTIONS.state))
   } else {
     answers.state = check('state', text(a.state, { required: false, max: 80 }))
   }

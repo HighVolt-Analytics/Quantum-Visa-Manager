@@ -20,13 +20,8 @@ import {
   BOOKING_V2_SITE,
   countryOptions,
   detectTimeZone,
-  regionsForCountry,
   shiftCalendarMonth,
   SYDNEY,
-  timeZoneChoices,
-  localEquivalent,
-  sydneyZoneLabel,
-  zoneLabel,
 } from './bookingClient.js'
 
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || ''
@@ -62,49 +57,10 @@ function el(tag, attrs = {}, ...children) {
   return node
 }
 
-function syncRegionField(form, countryCode) {
-  const field = form.querySelector('[data-region-field]') || form.querySelector('[name="state"]')?.closest('.field')
-  if (!field) return
-  field.dataset.regionField = 'true'
-  const previous = String(form.querySelector('[name="state"]')?.value || '').trim()
-  const regions = regionsForCountry(countryCode)
-  const label = field.querySelector('label')
-  if (label) {
-    label.htmlFor = 'state'
-    label.textContent = 'State / province / region'
-  }
-  const control = regions
-    ? el(
-        'select',
-        { className: 'select', id: 'state', name: 'state', required: true },
-        el('option', { value: '' }, 'Select a region'),
-        ...regions.map((name) => el('option', { value: name, selected: name === previous }, name)),
-      )
-    : el('input', {
-        className: 'input',
-        id: 'state',
-        name: 'state',
-        autocomplete: 'address-level1',
-        required: true,
-        value: regionsForCountry('AU')?.includes(previous) ? '' : previous,
-        placeholder: 'State, province or region',
-      })
-  const existing = field.querySelector('#state, [name="state"]')
-  if (existing) existing.replaceWith(control)
-  else field.append(control)
-  let err = field.querySelector('.err')
-  if (!err) {
-    err = el('span', { className: 'err' }, 'Please enter your state, province or region.')
-    field.append(err)
-  } else {
-    err.textContent = 'Please enter your state, province or region.'
-  }
-}
-
 function ensureCountryField(form) {
   if (form.querySelector('[name="country"]')) return
-  const stateField = form.querySelector('[name="state"]')?.closest('.field')
-  if (!stateField) return
+  const orgField = form.querySelector('[name="org"]')?.closest('.field')
+  if (!orgField) return
   const countries = countryOptions()
   const hidden = el('input', { type: 'hidden', id: 'country', name: 'country', required: true, value: '' })
   const search = el('input', {
@@ -128,7 +84,7 @@ function ensureCountryField(form) {
     list,
     el('span', { className: 'err' }, 'Please select your country.'),
   )
-  stateField.before(field)
+  orgField.after(field)
 
   function closeList() {
     list.hidden = true
@@ -146,7 +102,6 @@ function ensureCountryField(form) {
         hidden.value = item.code
         search.value = item.name
         closeList()
-        syncRegionField(form, item.code)
       })
       list.append(option)
     }
@@ -165,38 +120,12 @@ function ensureCountryField(form) {
       if (!hidden.value) search.value = ''
     }, 150)
   })
-  syncRegionField(form, '')
 }
 
 function ensureTimeZoneField(form) {
   if (form.querySelector('[name="timeZone"]')) return
-  const stateField = form.querySelector('[name="state"]')?.closest('.field')
-  if (!stateField) return
   const detected = detectTimeZone()
-  const hidden = el('input', { type: 'hidden', id: 'timeZone', name: 'timeZone', value: detected, required: true })
-  const summary = el('p', { className: 'hint', 'data-timezone-label': 'true' }, `Using ${detected}`)
-  const toggle = el('button', { type: 'button', className: 'link-btn', 'data-timezone-change': 'true' }, 'Change timezone')
-  const select = el('select', { className: 'select', id: 'timeZone-select', hidden: true })
-  for (const zone of timeZoneChoices(detected)) select.append(el('option', { value: zone, selected: zone === detected }, zone))
-  select.addEventListener('change', () => {
-    hidden.value = select.value
-    summary.textContent = `Using ${select.value}`
-  })
-  toggle.addEventListener('click', () => {
-    select.hidden = !select.hidden
-    toggle.textContent = select.hidden ? 'Change timezone' : 'Hide timezone list'
-  })
-  const field = el(
-    'div',
-    { className: 'field', 'data-timezone-field': 'true' },
-    el('span', { className: 'label' }, 'Timezone'),
-    hidden,
-    summary,
-    el('p', { className: 'hint' }, 'Times are 9:00 am–7:00 pm in this timezone, every day.'),
-    toggle,
-    select,
-  )
-  stateField.before(field)
+  form.append(el('input', { type: 'hidden', id: 'timeZone', name: 'timeZone', value: detected, required: true }))
 }
 
 /**
@@ -217,7 +146,6 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
   const datesBox = $('[data-booking-dates]')
   const timesBox = $('[data-booking-times]')
   const timesHint = $('[data-booking-times-hint]')
-  const zoneNote = $('[data-booking-zone]')
   const tsBox = $('[data-turnstile]')
   const tsField = tsBox.closest('.field')
   const status = $('[data-booking-status]')
@@ -242,7 +170,7 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
     calendar: null,
   }
 
-  note.textContent = 'Next, choose a 30-minute time. Times are shown in Sydney time.'
+  note.textContent = 'Next, choose a 30-minute time.'
   submit.textContent = 'Choose a time'
 
   const scrollTo = (node) => node.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' })
@@ -274,17 +202,6 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
 
   function visitorTimeZone() {
     return String(new FormData(form).get('timeZone') || detectTimeZone() || '').trim()
-  }
-
-  function updateZoneNote(day) {
-    const visitor = visitorTimeZone()
-    const sample = day?.slots?.[0]?.start
-    const when = sample ? new Date(sample) : new Date()
-    if (state.schedule?.timeZone) {
-      zoneNote.textContent = `Times are shown in ${zoneLabel(when, state.schedule.timeZone)}. Your timezone is ${visitor || 'unknown'}.`
-      return
-    }
-    zoneNote.textContent = `All times are Sydney time, ${sydneyZoneLabel(when)}. Your timezone is ${visitor || 'unknown'}.`
   }
 
   function resetTurnstile() {
@@ -331,14 +248,12 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
     const day = state.days.find((d) => d.date === state.date)
     timesBox.replaceChildren()
     state.slot = null
-    updateZoneNote(day)
     if (!day || !day.slots.length) {
       timesHint.textContent = 'Choose a date with available times on the calendar.'
       return
     }
     timesHint.textContent = `${day.slots.length} available ${day.slots.length === 1 ? 'time' : 'times'} on ${day.longLabel}.`
     for (const s of day.slots) {
-      const local = localEquivalent(s.start, undefined, state.schedule?.timeZone)
       const input = el('input', { type: 'radio', name: 'bookingSlot', value: s.start })
       input.addEventListener('change', () => {
         state.slot = s
@@ -346,8 +261,8 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
         say('')
       })
       timesBox.append(
-        el('label', { className: 'choice choice--center choice--stack' }, input,
-          el('span', {}, el('b', {}, state.schedule?.timeZone ? formatZoneTime(s.start, state.schedule.timeZone) : formatSydneyTime(s.start)), local ? el('small', {}, `${local} your time`) : null)),
+        el('label', { className: 'choice choice--center' }, input,
+          el('span', {}, el('b', {}, state.schedule?.timeZone ? formatZoneTime(s.start, state.schedule.timeZone) : formatSydneyTime(s.start)))),
       )
     }
   }
@@ -478,7 +393,7 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
       : null
     note.textContent = state.schedule
       ? `Next, choose a time. Times are shown in ${state.schedule.timeZone}.`
-      : 'Next, choose a 30-minute time. Times are shown in Sydney time.'
+      : 'Next, choose a 30-minute time.'
     renderDates()
     if (!state.slots.length) say(`No times are available in the next 14 days. Please email ${CONTACT} and we'll arrange one.`, 'error')
     return true
@@ -518,9 +433,6 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
     }
     put('date', d.date)
     put('time', d.time)
-    put('zone', d.zone)
-    put('local', d.local || '')
-    booked.querySelector('[data-booked-local-row]').hidden = !d.local
     put('email', d.email)
     put('ref', d.reference)
     form.style.display = 'none'

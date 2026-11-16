@@ -263,7 +263,7 @@ function zoneOffsetMinutes(date, zone) {
   return Math.round((Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - Math.floor(date.getTime() / 60000) * 60000) / 60000)
 }
 
-const FIELD_NAMES = ['size', 'system', 'systemName', 'bottleneck', 'first', 'last', 'email', 'phone', 'org', 'state']
+const FIELD_NAMES = ['size', 'system', 'systemName', 'bottleneck', 'first', 'last', 'email', 'phone', 'org']
 
 /** Builds the exact request body the booking API validates. Country and timezone are sent only for v2. */
 export function buildBookingPayload({ form, slotStart, turnstileToken, idempotencyKey, includeCountry = false }) {

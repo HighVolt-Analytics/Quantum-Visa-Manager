@@ -62,15 +62,13 @@
             <div class="field"><label for="email">Work email</label><input class="input" id="email" name="email" type="email" autocomplete="email" required><span class="err">Please enter a valid email address.</span></div>
             <div class="field"><label for="phone">Phone <span class="muted">(optional)</span></label><input class="input" id="phone" name="phone" type="tel" autocomplete="tel" placeholder="04•• ••• •••"></div>
             <div class="field"><label for="org">Practice or company</label><input class="input" id="org" name="org" autocomplete="organization" required><span class="err">Please enter your practice or company name.</span></div>
-            <div class="field" data-region-field="true"><label for="state">State / province / region</label><select class="select" id="state" name="state"><option value="">Select a region</option><option>NSW</option><option>VIC</option><option>QLD</option><option>WA</option><option>SA</option><option>TAS</option><option>ACT</option><option>NT</option><option>Outside Australia</option></select><span class="err">Please enter your state, province or region.</span></div>
           </div>
-          <label class="choice"><input type="checkbox" name="consent" value="yes" required><span class="small">I agree to High Volt Analytics contacting me about this demonstration, as described in the <a class="link" href="/privacy" style="display:inline">Privacy Policy</a>.</span></label>
+          <label class="choice"><input type="checkbox" name="consent" value="yes" required><span class="small">I agree to High Volt Analytics contacting me about this demonstration.</span></label>
           <span class="err">Please confirm so we can contact you.</span>
         </fieldset>
 
         <fieldset class="fieldset" data-booking-step hidden>
           <legend tabindex="-1"><span class="n">05</span>Choose a time</legend>
-          <p class="small muted" data-booking-zone>All times are Sydney time.</p>
           <div class="field">
             <span class="label" id="bk-date-label">Date</span>
             <div class="booking-calendar" data-booking-dates></div>
@@ -86,7 +84,7 @@
             <div class="turnstile-box" data-turnstile></div>
             <span class="err">Please complete the security check.</span>
           </div>
-          <p class="xs muted">Your demo is booked in High Volt Analytics’ Microsoft 365 calendar, which sends your Microsoft Teams invitation. Cloudflare Turnstile checks that this request comes from a person. See our <a class="link" href="/privacy#book-a-demo" style="display:inline">Privacy Policy</a>.</p>
+          <p class="xs muted">Your demo is booked in High Volt Analytics’ Microsoft 365 calendar, which sends your Microsoft Teams invitation. Cloudflare Turnstile checks that this request comes from a person.</p>
         </fieldset>
 
         <p class="small booking-status" role="status" aria-live="polite" data-booking-status></p>
@@ -103,8 +101,7 @@
         <p class="muted measure-sm booked-lead">Your demonstration is confirmed. A Microsoft Teams invitation is on its way.</p>
         <dl class="booked-summary">
           <div class="booked-row"><dt>Date</dt><dd data-booked-date></dd></div>
-          <div class="booked-row"><dt>Time</dt><dd><span data-booked-time></span><span class="booked-zone" data-booked-zone></span></dd></div>
-          <div class="booked-row" data-booked-local-row hidden><dt>Your local time</dt><dd data-booked-local></dd></div>
+          <div class="booked-row"><dt>Time</dt><dd data-booked-time></dd></div>
           <div class="booked-row"><dt>Invitation sent to</dt><dd class="booked-email" data-booked-email></dd></div>
           <div class="booked-row"><dt>Booking reference</dt><dd class="booked-ref" data-booked-ref></dd></div>
         </dl>
@@ -138,6 +135,7 @@
           <li><i data-lucide="hand"></i><span><b>No obligation.</b> Pricing follows once we understand your needs.</span></li>
         </ul>
       </div>
+      <div class="card"><h3 class="h3">Unable to book a demo?</h3><p>Email <a class="link" href="mailto:arup@highvolt.tech?subject=Book%20a%20Demo" style="display:inline">arup@highvolt.tech</a> and we’ll arrange a time.</p></div>
       <div class="card card--accent"><span class="eyebrow" style="color:var(--accent-ink)">Prefer a quick look first?</span><p style="color:var(--ink-2)">Watch a captioned walkthrough of the document-to-checklist workflow.</p><a class="link" href="#" data-watch><i data-lucide="play"></i> Watch It Work</a></div>
     </aside>
   </div>

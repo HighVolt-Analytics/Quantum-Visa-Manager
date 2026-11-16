@@ -47,7 +47,6 @@ export function answers(overrides = {}) {
     email: `testy.${randomUUID().slice(0, 8)}@example.test`,
     phone: '0400 000 000',
     org: 'Example Migration Testing Pty Ltd',
-    state: 'NSW',
     consent: true,
     ...overrides,
   }
