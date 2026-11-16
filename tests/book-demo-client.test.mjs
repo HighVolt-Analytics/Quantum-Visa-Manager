@@ -121,13 +121,13 @@ describe('Sydney time display', () => {
 describe('booking request', () => {
   it('maps the questionnaire to the API contract', () => {
     const fd = new FormData()
-    for (const [k, v] of Object.entries({ size: '2–5', system: 'A mix of several tools', systemName: '', bottleneck: 'chasing missing documents', first: ' Test ', last: 'Person', email: 'test@example.test', phone: '', org: 'Example Pty Ltd', state: 'NSW', country: 'AU', consent: 'yes' })) fd.set(k, v)
+    for (const [k, v] of Object.entries({ size: '2–5', system: 'A mix of several tools', systemName: '', bottleneck: 'chasing missing documents', first: ' Test ', last: 'Person', email: 'test@example.test', phone: '', org: 'Example Pty Ltd', country: 'AU', consent: 'yes' })) fd.set(k, v)
     const p = buildBookingPayload({ form: fd, slotStart: '2026-10-26T23:00:00.000Z', turnstileToken: 'tok', idempotencyKey: 'k' })
     assert.deepEqual(p, {
       idempotencyKey: 'k',
       slotStart: '2026-10-26T23:00:00.000Z',
       turnstileToken: 'tok',
-      answers: { size: '2–5', system: 'A mix of several tools', systemName: '', bottleneck: 'chasing missing documents', first: 'Test', last: 'Person', email: 'test@example.test', phone: '', org: 'Example Pty Ltd', state: 'NSW', consent: true },
+      answers: { size: '2–5', system: 'A mix of several tools', systemName: '', bottleneck: 'chasing missing documents', first: 'Test', last: 'Person', email: 'test@example.test', phone: '', org: 'Example Pty Ltd', consent: true },
     })
     assert.equal('country' in p.answers, false)
     assert.equal('timeZone' in p, false)
@@ -135,7 +135,7 @@ describe('booking request', () => {
     const v2 = buildBookingPayload({ form: fd, slotStart: '2026-10-26T23:00:00.000Z', turnstileToken: 'tok', idempotencyKey: 'k', includeCountry: true })
     assert.equal(v2.answers.country, 'AU')
     assert.equal(v2.timeZone, 'Australia/Sydney')
-    assert.equal(v2.answers.state, 'NSW')
+    assert.equal('state' in v2.answers, false)
   })
 
   it('reuses an idempotency key only for an identical retry', () => {
@@ -237,10 +237,13 @@ describe('Book a Demo page markup', async () => {
 
   it('keeps the four original questionnaire sections', () => {
     for (const legend of ['Practice size', 'Current system', 'Biggest bottleneck', 'Contact details']) assert.ok(html.includes(legend), legend)
-    for (const name of ['name="size"', 'name="system"', 'name="systemName"', 'name="bottleneck"', 'name="first"', 'name="last"', 'name="email"', 'name="phone"', 'name="org"', 'name="state"', 'name="consent"']) assert.ok(html.includes(name), name)
+    for (const name of ['name="size"', 'name="system"', 'name="systemName"', 'name="bottleneck"', 'name="first"', 'name="last"', 'name="email"', 'name="phone"', 'name="org"', 'name="consent"']) assert.ok(html.includes(name), name)
+    assert.ok(!html.includes('name="state"'))
     assert.equal(html.includes('name="country"'), false)
     assert.equal(html.includes('name="timeZone"'), false)
-    assert.match(html, /State \/ province \/ region/)
+    assert.ok(!html.includes('Privacy Policy'))
+    assert.ok(html.includes('arup@highvolt.tech'))
+    assert.ok(html.includes('Unable to book a demo?'))
   })
 
   it('exposes curated regions and a short timezone chooser without dumping every IANA zone', () => {
@@ -256,7 +259,6 @@ describe('Book a Demo page markup', async () => {
   it('hides the time step until the questions are valid and masks the panel from Clarity', () => {
     assert.match(html, /<fieldset class="fieldset" data-booking-step hidden>/)
     assert.match(html, /class="panel reveal" data-clarity-mask="True"/)
-    assert.match(html, /href="\/privacy#book-a-demo"/)
   })
 
   it('announces the confirmation and keeps every detail and action', () => {
@@ -264,7 +266,9 @@ describe('Book a Demo page markup', async () => {
     assert.ok(panel, 'confirmation panel')
     assert.match(panel[0], /role="status" aria-live="polite" aria-labelledby="booked-title" tabindex="-1"/)
     assert.match(panel[0], /<h2 class="h2" id="booked-title">You’re booked in\.<\/h2>/)
-    for (const hook of ['date', 'time', 'zone', 'local', 'local-row', 'email', 'ref']) assert.ok(panel[0].includes(`data-booked-${hook}`), hook)
+    for (const hook of ['date', 'time', 'email', 'ref']) assert.ok(panel[0].includes(`data-booked-${hook}`), hook)
+    assert.ok(!panel[0].includes('data-booked-zone'))
+    assert.ok(!panel[0].includes('data-booked-local'))
     assert.match(panel[0], /junk or spam folder/)
     assert.match(panel[0], /reply to the invitation/)
     assert.match(panel[0], /href="\/how-it-works#tour">Explore the interactive tour</)
@@ -328,7 +332,7 @@ describe('booking contact', () => {
     const files = ['../src/content/BookDemo.html', '../src/lib/bookDemo.js', '../src/lib/bookingClient.js']
     for (const f of files) assert.ok(!(await readFile(new URL(f, import.meta.url), 'utf8')).includes('hello@highvolt.tech'), f)
     const page = await readFile(new URL('../src/content/BookDemo.html', import.meta.url), 'utf8')
-    assert.equal((page.match(/mailto:arup@highvolt\.tech\?subject=Book%20a%20Demo/g) || []).length, 4)
+    assert.equal((page.match(/mailto:arup@highvolt\.tech\?subject=Book%20a%20Demo/g) || []).length, 5)
     const support = await readFile(new URL('../src/content/Support.html', import.meta.url), 'utf8')
     assert.ok(support.includes('sales@highvolt.tech'), 'sales contact is on the support page')
   })

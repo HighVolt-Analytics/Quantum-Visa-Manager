@@ -857,6 +857,26 @@ test('qvm state accepts non-AU regions as text while AU stays on the territory l
   assert.equal(india.ok, true)
   assert.equal(india.value.answers.countryCode, 'IN')
   assert.equal(india.value.answers.state, 'Maharashtra')
+  const noRegion = validateV2Booking({
+    site: 'qvm',
+    idempotencyKey: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    slotStart: slot.start,
+    timeZone: 'Australia/Sydney',
+    turnstileToken: 'token',
+    answers: {
+      size: 'Sole agent',
+      system: 'Spreadsheets, email and shared drives',
+      bottleneck: 'after-hours enquiries',
+      first: 'Ada',
+      last: 'Lovelace',
+      email: 'ada@example.test',
+      org: 'Practice Co',
+      country: 'AU',
+      consent: true,
+    },
+  })
+  assert.equal(noRegion.ok, true)
+  assert.equal(noRegion.value.answers.state, '')
   const badAu = validateV2Booking({
     site: 'qvm',
     idempotencyKey: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',

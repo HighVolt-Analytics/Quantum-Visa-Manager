@@ -17,6 +17,7 @@ export const OPTIONS = Object.freeze({
     'sponsor document management',
     'switching from our current system',
   ],
+  // Kept for v2 AU region validation when a region is still submitted.
   state: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT', 'Outside Australia'],
 })
 
@@ -66,7 +67,6 @@ export function validateBookingRequest(body) {
     email: check('email', text(a.email, { required: true, max: 254 })),
     phone: check('phone', text(a.phone, { required: false, max: 32 })),
     org: check('org', text(a.org, { required: true, max: 120 })),
-    state: check('state', choice(a.state, OPTIONS.state)),
   }
   if (answers.email && !EMAIL.test(answers.email)) errors.push('email')
   if (answers.phone && !PHONE.test(answers.phone)) errors.push('phone')
