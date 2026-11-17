@@ -38,6 +38,7 @@ const KNOWN_ANSWER_KEYS = new Set([
   'country',
   'countryCode',
   'partner',
+  'sponsorshipTeam',
   'consent',
 ])
 
@@ -97,6 +98,7 @@ export function validateV2Booking(body) {
     partner: a.partner === true,
     consent: false,
   }
+  if (a.sponsorshipTeam === true) answers.sponsorshipTeam = true
   if (isHva) {
     answers.address = check('address', text(a.address, { required: false, max: 200 }))
     answers.specialRequests = check('specialRequests', text(a.specialRequests || a.bottleneck, { required: false, max: 500 }))

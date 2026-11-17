@@ -136,6 +136,11 @@ describe('booking request', () => {
     assert.equal(v2.answers.country, 'AU')
     assert.equal(v2.timeZone, 'Australia/Sydney')
     assert.equal('state' in v2.answers, false)
+    assert.equal('sponsorshipTeam' in v2.answers, false)
+    fd.set('sponsorshipTeam', 'yes')
+    const withTeam = buildBookingPayload({ form: fd, slotStart: '2026-10-26T23:00:00.000Z', turnstileToken: 'tok', idempotencyKey: 'k', includeCountry: true })
+    assert.equal(withTeam.answers.sponsorshipTeam, true)
+    assert.equal(withTeam.answers.size, '2–5')
   })
 
   it('reuses an idempotency key only for an identical retry', () => {
@@ -238,6 +243,8 @@ describe('Book a Demo page markup', async () => {
   it('keeps the four original questionnaire sections', () => {
     for (const legend of ['Practice size', 'Current system', 'Biggest bottleneck', 'Contact details']) assert.ok(html.includes(legend), legend)
     for (const name of ['name="size"', 'name="system"', 'name="systemName"', 'name="bottleneck"', 'name="first"', 'name="last"', 'name="email"', 'name="phone"', 'name="org"', 'name="consent"']) assert.ok(html.includes(name), name)
+    assert.match(html, /type="checkbox" name="sponsorshipTeam"/)
+    assert.ok(!html.includes('value="Corporate HR / sponsorship team"'))
     // Country is injected for v2 only; state/province is not collected.
     assert.ok(!html.includes('name="state"'))
     assert.equal(html.includes('name="country"'), false)

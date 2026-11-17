@@ -270,6 +270,7 @@ export function buildBookingPayload({ form, slotStart, turnstileToken, idempoten
   const answers = {}
   for (const name of FIELD_NAMES) answers[name] = String(form.get(name) ?? '').trim()
   if (includeCountry) answers.country = String(form.get('country') ?? '').trim()
+  if (form.get('sponsorshipTeam') === 'yes') answers.sponsorshipTeam = true
   answers.consent = form.get('consent') === 'yes'
   const payload = { idempotencyKey, slotStart, turnstileToken, answers }
   if (includeCountry) payload.timeZone = String(form.get('timeZone') ?? '').trim()
