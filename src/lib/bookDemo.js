@@ -20,6 +20,7 @@ import {
   BOOKING_V2_SITE,
   countryOptions,
   detectTimeZone,
+  regionsForCountry,
   shiftCalendarMonth,
   SYDNEY,
 } from './bookingClient.js'
@@ -57,6 +58,46 @@ function el(tag, attrs = {}, ...children) {
   return node
 }
 
+function ensureStateField(form, afterField) {
+  let field = form.querySelector('[data-state-field]')
+  if (field) return field
+  field = el(
+    'div',
+    { className: 'field', 'data-state-field': 'true' },
+    el('label', { for: 'state' }, 'State / Province'),
+    el('span', { className: 'err' }, 'Please enter your state or province.'),
+  )
+  afterField.after(field)
+
+  function renderControl(countryCode) {
+    const previous = field.querySelector('[name="state"]')
+    if (previous) previous.remove()
+    field.classList.remove('has-error')
+    const regions = regionsForCountry(countryCode)
+    const control = regions
+      ? el(
+          'select',
+          { className: 'select', id: 'state', name: 'state', required: true, autocomplete: 'address-level1' },
+          el('option', { value: '' }, 'Select one'),
+          ...regions.map((name) => el('option', { value: name }, name)),
+        )
+      : el('input', {
+          className: 'input',
+          id: 'state',
+          name: 'state',
+          required: true,
+          autocomplete: 'address-level1',
+          placeholder: 'State or province',
+          value: '',
+        })
+    field.querySelector('label').after(control)
+  }
+
+  renderControl('')
+  field._setCountry = (countryCode) => renderControl(countryCode)
+  return field
+}
+
 function ensureCountryField(form) {
   if (form.querySelector('[name="country"]')) return
   const orgField = form.querySelector('[name="org"]')?.closest('.field')
@@ -85,6 +126,13 @@ function ensureCountryField(form) {
     el('span', { className: 'err' }, 'Please select your country.'),
   )
   orgField.after(field)
+  const stateField = ensureStateField(form, field)
+
+  function setCountry(code, label) {
+    hidden.value = code || ''
+    if (label !== undefined) search.value = label
+    stateField._setCountry?.(code || '')
+  }
 
   function closeList() {
     list.hidden = true
@@ -99,8 +147,7 @@ function ensureCountryField(form) {
       const option = el('li', { role: 'option', 'data-code': item.code, tabIndex: -1 }, item.name)
       option.addEventListener('mousedown', (event) => {
         event.preventDefault()
-        hidden.value = item.code
-        search.value = item.name
+        setCountry(item.code, item.name)
         closeList()
       })
       list.append(option)
@@ -111,13 +158,16 @@ function ensureCountryField(form) {
 
   search.addEventListener('focus', () => renderList(search.value))
   search.addEventListener('input', () => {
-    hidden.value = ''
+    setCountry('', search.value)
     renderList(search.value)
   })
   search.addEventListener('blur', () => {
     window.setTimeout(() => {
       closeList()
-      if (!hidden.value) search.value = ''
+      if (!hidden.value) {
+        search.value = ''
+        setCountry('', '')
+      }
     }, 150)
   })
 }
@@ -362,10 +412,17 @@ export function setupBooking(form, { onUnavailable, reduceMotion }) {
 
   async function loadTimes({ quiet = false } = {}) {
     if (!quiet) setBusy(true, 'Loading times…')
-    const country = String(new FormData(form).get('country') || '')
-    const timeZone = String(new FormData(form).get('timeZone') || '')
+    const fd = new FormData(form)
+    const country = String(fd.get('country') || '')
+    const region = String(fd.get('state') || '').trim()
+    const timeZone = String(fd.get('timeZone') || '')
     if (isBookingV2Enabled() && !country) {
       say('Please select your country.', 'error')
+      return false
+    }
+    if (isBookingV2Enabled() && !region) {
+      say('Please enter your state or province.', 'error')
+      markInvalid(['state'])
       return false
     }
     if (isBookingV2Enabled() && !timeZone) {
