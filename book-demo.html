@@ -63,17 +63,21 @@
 
         <fieldset class="fieldset">
           <legend><span class="n">03</span>Biggest bottleneck</legend>
-          <div class="choice-grid">
-            <label class="choice"><input type="radio" name="bottleneck" value="chasing missing documents" required><span>Chasing missing documents</span></label>
-            <label class="choice"><input type="radio" name="bottleneck" value="checking expiry and eligibility"><span>Checking expiry and eligibility</span></label>
-            <label class="choice"><input type="radio" name="bottleneck" value="re-entering data into forms"><span>Re-entering data into forms</span></label>
-            <label class="choice"><input type="radio" name="bottleneck" value="Department and client correspondence"><span>Department and client correspondence</span></label>
-            <label class="choice"><input type="radio" name="bottleneck" value="keeping up with changing requirements"><span>Keeping up with changing requirements</span></label>
-            <label class="choice"><input type="radio" name="bottleneck" value="after-hours enquiries"><span>Missing enquiries after hours</span></label>
-            <label class="choice"><input type="radio" name="bottleneck" value="sponsor document management"><span>Managing sponsor documents</span></label>
-            <label class="choice"><input type="radio" name="bottleneck" value="switching from our current system"><span>Switching from our current system</span></label>
+          <div class="field">
+            <label for="bottleneck">What slows you down most?</label>
+            <select class="select" id="bottleneck" name="bottleneck" required>
+              <option value="">Select one</option>
+              <option value="chasing missing documents">Chasing missing documents</option>
+              <option value="checking expiry and eligibility">Checking expiry and eligibility</option>
+              <option value="re-entering data into forms">Re-entering data into forms</option>
+              <option value="Department and client correspondence">Department and client correspondence</option>
+              <option value="keeping up with changing requirements">Keeping up with changing requirements</option>
+              <option value="after-hours enquiries">Missing enquiries after hours</option>
+              <option value="sponsor document management">Managing sponsor documents</option>
+              <option value="switching from our current system">Switching from our current system</option>
+            </select>
+            <span class="err">Please choose the bottleneck you’d like us to show first.</span>
           </div>
-          <span class="err">Please choose the bottleneck you’d like us to show first.</span>
         </fieldset>
 
         <fieldset class="fieldset">
