@@ -22,7 +22,7 @@ import { setupBooking } from './bookDemo.js';
       ['Correspondence & Tasks', 'platform.html#correspondence', 'Department and client email to action'],
       ['Document & Checklist Automation', 'platform.html#documents', 'Check, file and update automatically'],
       ['Form Preparation', 'platform.html#forms', 'Mapping and browser-assisted prefill'],
-      ['AI Control & Security', 'ai-control-security.html', 'Your rules, audit trail and data residency'],
+      ['Security & Governance', 'ai-control-security.html', 'Azure hosting, access control and practice isolation'],
     ] },
     { t: 'Solutions', h: 'solutions.html', key: 'solutions', sub: [
       ['Migration Practices', 'solutions.html#practices', 'For registered migration agents and teams'],
@@ -68,17 +68,17 @@ import { setupBooking } from './bookDemo.js';
         <div class="f-brand"><a class="brand" href="index.html">${LOGO}<span>Quantum <span class="brand-sub">Visa Manager</span></span></a>
           <p>Software that completes the administrative work behind every visa matter — while registered migration agents stay responsible for advice, review and lodgement.</p>
           <a class="status-dot" href="support.html#status">All systems operational</a></div>
-        ${col('Platform', [['Visa Operations', 'visa-operations.html'], ['Correspondence & Tasks', 'platform.html#correspondence'], ['Document & Checklist', 'platform.html#documents'], ['Form Preparation', 'platform.html#forms'], ['Visa Library', 'platform.html#library'], ['AI Control', 'ai-control-security.html']])}
+        ${col('Platform', [['Visa Operations', 'visa-operations.html'], ['Correspondence & Tasks', 'platform.html#correspondence'], ['Document & Checklist', 'platform.html#documents'], ['Form Preparation', 'platform.html#forms'], ['Visa Library', 'platform.html#library'], ['Security & Governance', 'ai-control-security.html']])}
         ${col('Solutions', [['Migration Practices', 'solutions.html#practices'], ['Corporate Sponsorship', 'corporate-sponsorship.html'], ['Practice Growth', 'practice-growth.html'], ['Skills Assessment — soon', 'solutions.html#skills'], ['Interactive Tour', 'how-it-works.html#tour']])}
         ${col('Company', [['About', 'resources.html#about'], ['Product Videos', 'resources.html#product-videos'], ['Guides', 'resources.html#guides'], ['Pricing', 'pricing.html'], ['Contact', 'support.html#contact'], ['Book a Demo', 'book-demo.html']])}
-        ${col('Support & Legal', [['Support', 'support.html'], ['Product status', 'support.html#status'], ['Security', 'ai-control-security.html#security'], ['Data residency', 'ai-control-security.html#residency'], ['Privacy', 'privacy.html'], ['Terms', 'terms.html']])}
+        ${col('Support & Legal', [['Support', 'support.html'], ['Product status', 'support.html#status'], ['Security', 'ai-control-security.html'], ['Data residency', 'ai-control-security.html#residency'], ['Privacy', 'privacy.html'], ['Terms', 'terms.html']])}
       </div>
       <div class="f-ack">
         <p>We acknowledge the Traditional Custodians of the lands on which we work and live, and pay our respects to Elders past and present. Sovereignty was never ceded.</p>
         <p>Quantum Visa Manager is practice-administration software. It does not provide immigration assistance or legal advice. Immigration assistance in Australia must be given by a registered migration agent or a person otherwise permitted to do so under the <i>Migration Act 1958</i>. Calculators and timelines are estimates, not guarantees of outcomes or processing times.</p>
       </div>
       <div class="f-bottom"><span>© 2026 High Volt Analytics. Made in Sydney, Australia. Prices in AUD.</span>
-        <nav aria-label="Legal"><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="ai-control-security.html#security">Security</a><a href="ai-control-security.html#residency">Data residency</a><a href="support.html">Support</a></nav></div>
+        <nav aria-label="Legal"><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="ai-control-security.html">Security</a><a href="ai-control-security.html#residency">Data residency</a><a href="support.html">Support</a></nav></div>
     </div>`;
     document.body.appendChild(f);
   }

@@ -68,6 +68,7 @@ export function validateBookingRequest(body) {
     phone: check('phone', text(a.phone, { required: false, max: 32 })),
     org: check('org', text(a.org, { required: true, max: 120 })),
   }
+  if (a.sponsorshipTeam === true) answers.sponsorshipTeam = true
   if (answers.email && !EMAIL.test(answers.email)) errors.push('email')
   if (answers.phone && !PHONE.test(answers.phone)) errors.push('phone')
   if (a.consent !== true) errors.push('consent')

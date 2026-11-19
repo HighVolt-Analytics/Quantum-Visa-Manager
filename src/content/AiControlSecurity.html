@@ -1,123 +1,161 @@
-<section class="page-hero center" style="text-align:center">
+<div class="secgov" id="security">
+<section class="secgov-hero">
   <div class="wrap">
-    <span class="eyebrow reveal">AI Control &amp; Security</span>
-    <h1 class="h1 reveal reveal-d1" style="font-size:var(--text-3xl)">AI should follow your rules.</h1>
-    <p class="lead reveal reveal-d2">Decide where automation acts and where your team decides. See every action. Keep your data where you choose — and keep your own copy.</p>
-    <div class="btn-row reveal reveal-d3" style="justify-content:center"><a class="btn btn--primary btn--lg" href="#matrix">Explore Controls</a><a class="btn btn--ghost btn--lg" href="#security">Security and data</a></div>
-  </div>
-</section>
-
-<nav class="subnav" aria-label="Section navigation"><div class="wrap"><a href="#matrix">AI Control Matrix</a><a href="#gates">Approval gates</a><a href="#configuration">Configuration</a><a href="#audit">Audit trail</a><a href="#residency">Data residency</a><a href="#backups">Backups</a><a href="#security">Security</a></div></nav>
-
-<section class="section" id="matrix">
-  <div class="wrap split" style="align-items:start">
-    <div class="split-copy sticky-col reveal">
-      <span class="eyebrow"><span class="num">01</span> AI Control Matrix</span>
-      <h2 class="h2">Switch AI on, off, or to review — action by action.</h2>
-      <p class="lead">Every supported action can be set to <b class="ink">Automate</b>, <b class="ink">Review first</b> or <b class="ink">Manual</b>. Try it: changes are counted and logged, just as they are in the product.</p>
-      <div class="note-box"><i data-lucide="lock"></i><span><b>Some actions are always human.</b> Accepting a document as evidence, setting a governing legal deadline and lodging an application cannot be automated.</span></div>
+    <span class="pill reveal"><b><i data-lucide="shield-check"></i>Secured by Microsoft</b>Hosted in Australia · Sydney &amp; Melbourne</span>
+    <h1 class="secgov-title reveal">Your clients’ data. <span>Protected at every step.</span></h1>
+    <p class="lead reveal">Passports, transcripts and visa records live on Microsoft Azure in Australia, inside a microservices platform that checks every request before anything is shown.</p>
+    <div class="secgov-facts reveal">
+      <div class="secgov-fact"><i data-lucide="map-pin"></i><b>Australian data residency</b><span>App, database, documents, AI and backups stay in Azure Australia regions.</span></div>
+      <div class="secgov-fact"><i data-lucide="boxes"></i><b>Microservices on AKS</b><span>Containerised services on Azure Kubernetes Service, deployed through controlled pipelines.</span></div>
+      <div class="secgov-fact"><i data-lucide="lock"></i><b>Encrypted end to end</b><span>TLS 1.2 in transit. Database and documents encrypted at rest.</span></div>
+      <div class="secgov-fact"><i data-lucide="building-2"></i><b>Each practice isolated</b><span>Separate at the application and at the database row.</span></div>
     </div>
-    <div class="matrix reveal reveal-d1" data-matrix></div>
   </div>
 </section>
 
-<section class="section section--alt" id="gates">
+<section class="section section--alt" id="architecture">
   <div class="wrap">
-    <div class="sec-head center"><span class="eyebrow"><span class="num">02</span> Human in the loop</span><h2 class="h1">Approval gates at every consequential step.</h2><p class="lead">Quantum prepares. An authorised person decides.</p></div>
-    <div class="grid g4">
-      <div class="card reveal"><span class="ui-label">Gate 1</span><h3 class="h3">Document acceptance</h3><p>Checked documents wait for the consultant to accept or return them.</p></div>
-      <div class="card reveal reveal-d1"><span class="ui-label">Gate 2</span><h3 class="h3">Forms and prefill</h3><p>Every mapped and prefilled entry is verified before anything is submitted.</p></div>
-      <div class="card reveal reveal-d2"><span class="ui-label">Gate 3</span><h3 class="h3">Outgoing replies</h3><p>Drafts to clients and the Department are approved before they’re sent.</p></div>
-      <div class="card reveal reveal-d3"><span class="ui-label">Gate 4</span><h3 class="h3">Library updates</h3><p>Proposed changes to rules, fees and templates apply only after approval.</p></div>
-    </div>
-  </div>
-</section>
+    <div class="sec-head reveal"><span class="eyebrow"><span class="num">01</span> How it fits together</span><h2 class="h2">One path in. Every layer on Microsoft.</h2><p class="lead">Follow a request from your consultant’s browser to a client’s passport scan. Everything inside the blue line runs on Microsoft Azure in Sydney.</p></div>
 
-<section class="section" id="configuration">
-  <div class="wrap split">
-    <div class="split-copy reveal">
-      <span class="eyebrow"><span class="num">03</span> Configuration</span>
-      <h2 class="h2">Your workflows, not ours.</h2>
-      <p class="lead">Pipelines, stages, checklists, naming conventions, reminder cadence, templates and internal SLAs are all configured by your practice. AI behaviour is set through configuration — it doesn’t quietly learn new habits.</p>
-      <ul class="bullets">
-        <li><i data-lucide="check"></i><span><b>Exception handoffs</b> route unclear requests, unsuitable documents and low-confidence results to a person.</span></li>
-        <li><i data-lucide="check"></i><span><b>Matter-level overrides</b> for sensitive or complex files.</span></li>
-      </ul>
-    </div>
-    <div class="panel reveal reveal-d1" style="box-shadow:inset 0 0 0 1px var(--line), var(--shadow-lg);padding:var(--space-6)">
-      <div class="panel-head"><div><h3 class="h3">Workflow rules · Subclass 190</h3><p>Practice configuration</p></div><span class="tag">Saved</span></div>
+    <div class="secgov-arch reveal" role="img" aria-label="Architecture: users connect over HTTPS to Azure Front Door in Australia East, then to microservices on Azure Kubernetes Service, then to encrypted data services. Backups replicate to Australia Southeast." id="residency">
+      <div class="secgov-people">
+        <div class="secgov-col-h"><em>1</em>People</div>
+        <div class="secgov-person"><span class="secgov-av"><i data-lucide="user"></i></span><div>Client<small>Own application only</small></div></div>
+        <div class="secgov-person"><span class="secgov-av"><i data-lucide="briefcase"></i></span><div>Consultant<small>Assigned clients only</small></div></div>
+        <div class="secgov-person"><span class="secgov-av"><i data-lucide="user-cog"></i></span><div>Practice admin<small>Own practice only</small></div></div>
+      </div>
+
+      <div class="secgov-link" aria-hidden="true"><i class="secgov-dot"></i><i class="secgov-dot"></i><span class="secgov-tag">HTTPS · TLS 1.2</span></div>
+
       <div>
-        <div class="ui-row"><div class="grow"><b>Send first document request</b><small>When the service agreement is signed</small></div><button class="switch" role="switch" aria-checked="true" aria-label="Send first document request" data-switch></button></div>
-        <div class="ui-row"><div class="grow"><b>Reminder cadence</b><small>Every 5 business days · maximum 4</small></div><span class="ui-btn">Edit</span></div>
-        <div class="ui-row"><div class="grow"><b>Pause chasing on sensitive matters</b><small>Manual follow-up only</small></div><button class="switch" role="switch" aria-checked="false" aria-label="Pause chasing on sensitive matters" data-switch></button></div>
-        <div class="ui-row"><div class="grow"><b>Move to Preparation</b><small>When checklist is 100% accepted</small></div><button class="switch" role="switch" aria-checked="true" aria-label="Move to Preparation automatically" data-switch></button></div>
-        <div class="ui-row"><div class="grow"><b>Internal SLA · preparation</b><small>10 business days</small></div><span class="ui-btn">Edit</span></div>
-        <div class="ui-row"><div class="grow"><b>File naming convention</b><small class="mono">Type_Initials_DD-MM-YYYY</small></div><span class="ui-btn">Edit</span></div>
+        <div class="secgov-az">
+          <div class="secgov-az-label"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="6.5" height="6.5" fill="#f25022"/><rect x="8.5" y="1" width="6.5" height="6.5" fill="#7fba00"/><rect x="1" y="8.5" width="6.5" height="6.5" fill="#00a4ef"/><rect x="8.5" y="8.5" width="6.5" height="6.5" fill="#ffb900"/></svg>Microsoft Azure · Australia East<span class="secgov-flag"><i></i>Sydney, NSW</span></div>
+          <div class="secgov-az-grid">
+            <div class="secgov-blk">
+              <div class="secgov-col-h" style="margin:0"><em>2</em>Front door &amp; sign-in</div>
+              <div class="secgov-node"><span class="secgov-ic"><i data-lucide="door-open"></i></span><div><b>Azure Front Door</b><span>Single HTTPS entry point</span></div></div>
+              <div class="secgov-node"><span class="secgov-ic"><i data-lucide="key-round"></i></span><div><b>Password + one-time code</b><span>Code sent via Microsoft Graph, expires in 10 minutes</span></div></div>
+              <div class="secgov-node"><span class="secgov-ic"><i data-lucide="badge-check"></i></span><div><b>Signed session token</b><span>Short-lived JWT; blocked accounts denied</span></div></div>
+            </div>
+            <div class="secgov-link" aria-hidden="true"><i class="secgov-dot"></i></div>
+            <div class="secgov-blk">
+              <div class="secgov-col-h" style="margin:0"><em>3</em>Microservices · Azure Kubernetes Service</div>
+              <div class="secgov-svc">
+                <span class="secgov-chip"><i data-lucide="network"></i>API</span>
+                <span class="secgov-chip"><i data-lucide="folder-kanban"></i>Cases &amp; workflow</span>
+                <span class="secgov-chip"><i data-lucide="file-lock-2"></i>Documents</span>
+                <span class="secgov-chip"><i data-lucide="sparkles"></i>AI assist</span>
+                <span class="secgov-chip"><i data-lucide="bell"></i>Reminders &amp; email</span>
+                <span class="secgov-chip"><i data-lucide="plug"></i>Integrations</span>
+              </div>
+              <div class="secgov-ctx"><i data-lucide="fingerprint"></i><span>Every request carries your practice’s identity, role and organisation — checked by each service, including background jobs.</span></div>
+            </div>
+            <div class="secgov-link" aria-hidden="true"><i class="secgov-dot"></i></div>
+            <div class="secgov-blk">
+              <div class="secgov-col-h" style="margin:0"><em>4</em>Data &amp; AI services</div>
+              <div class="secgov-node"><span class="secgov-ic"><i data-lucide="database"></i></span><div><b>Azure SQL</b><span>Row-Level Security per practice</span><span class="secgov-lock"><i data-lucide="lock"></i>TDE at rest</span></div></div>
+              <div class="secgov-node"><span class="secgov-ic"><i data-lucide="files"></i></span><div><b>Azure Blob Storage</b><span>No public access · short-lived links</span><span class="secgov-lock"><i data-lucide="lock"></i>Encrypted at rest</span></div></div>
+              <div class="secgov-node"><span class="secgov-ic"><i data-lucide="vault"></i></span><div><b>Key Vault · Redis</b><span>Secrets out of code · cache over TLS</span></div></div>
+              <div class="secgov-node"><span class="secgov-ic"><i data-lucide="brain"></i></span><div><b>Azure OpenAI · AI Search · Document Intelligence · Speech</b><span>Processed in Australia</span></div></div>
+            </div>
+          </div>
+          <div class="secgov-az-foot">
+            <div class="secgov-strip"><b>Watched</b><span><i data-lucide="activity"></i>Application Insights</span><span><i data-lucide="gauge"></i>Azure Monitor</span><span><i data-lucide="shield"></i>Defender for SQL</span></div>
+            <div class="secgov-strip"><b>Released</b><span><i data-lucide="git-branch"></i>GitHub Actions</span><span><i data-lucide="package"></i>Container Registry</span><span><i data-lucide="layers"></i>Dev · Staging · Prod</span></div>
+          </div>
+        </div>
+        <div class="secgov-vlink" aria-hidden="true"></div>
+        <div class="secgov-bk">
+          <span class="secgov-bk-ic"><i data-lucide="database-backup"></i></span>
+          <div><b>Azure Australia Southeast</b><br><span>Automated backups with point-in-time restore</span></div>
+          <span class="secgov-flag">Melbourne, VIC</span>
+        </div>
       </div>
     </div>
+    <div class="secgov-legend"><span><i class="secgov-lg-dot"></i>Encrypted connection</span><span><i class="secgov-lg-az"></i>Microsoft Azure, Australia</span><span><i class="secgov-lg-lock"></i>Encrypted at rest</span></div>
   </div>
 </section>
 
-<section class="section section--alt" id="audit">
-  <div class="wrap split split--rev">
-    <div class="split-copy reveal">
-      <span class="eyebrow"><span class="num">04</span> Audit trail</span>
-      <h2 class="h2">A complete record of AI and people.</h2>
-      <p class="lead">Each event records the time, whether it was AI or a person, who, what action, on which matter, and the result. Administrators can review, download and send logs for compliance purposes.</p>
-      <button class="btn btn--dark" data-audit-export style="justify-self:start"><i data-lucide="download"></i>Download a sample log (CSV)</button>
-      <p class="xs muted">The sample contains masked, illustrative events.</p>
-    </div>
-    <div class="panel reveal reveal-d1" style="box-shadow:inset 0 0 0 1px var(--line), var(--shadow-lg)">
-      <div class="panel-head"><div><h3 class="h3">Activity</h3><p>All matters · today</p></div><span class="tag">8 events</span></div>
-      <div class="timeline" data-audit></div>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="residency">
+<section class="section" id="access">
   <div class="wrap">
-    <div class="sec-head sec-head--split"><div class="stack"><span class="eyebrow"><span class="num">05</span> Data residency and backups</span><h2 class="h1">Your data. Your control. Always.</h2></div><p class="lead">Australian data residency is available, with hosting set per practice tenant. Monthly backups go to a supported destination your practice selects.</p></div>
-    <div class="sec-grid">
-      <div class="panel span-3" data-options>
-        <div class="panel-head"><div><h3 class="h3">Hosting region</h3><p>Tenant-level setting, confirmed in your agreement.</p></div><i data-lucide="map-pin" style="width:18px;height:18px;color:var(--muted)"></i></div>
-        <div class="options" role="radiogroup" aria-label="Hosting region">
-          <button class="opt" role="radio" aria-checked="true" data-out="Primary storage, backups and processing boundaries for Australia are documented in your agreement."><span class="radio"></span><span class="grow">Australia<small>Australian data residency</small></span><span class="badge badge--live">Available</span></button>
-          <button class="opt" role="radio" aria-checked="false" data-out="Supported countries and their storage, backup, AI processing and subprocessor boundaries are confirmed before go-live."><span class="radio"></span><span class="grow">Another supported country<small>For practices with offshore requirements</small></span><span class="badge">On request</span></button>
+    <div class="sec-head reveal"><span class="eyebrow"><span class="num">02</span> Access control</span><h2 class="h2">Five checks before anyone sees a file.</h2><p class="lead">Knowing where a document is stored is never enough to open it. Every view or download passes each gate in turn.</p></div>
+    <div class="secgov-gates reveal">
+      <div class="secgov-gate"><div class="secgov-k"><span class="secgov-gate-ic"><i data-lucide="scan-face"></i></span><span>01</span></div><h3>Who are you?</h3><p>Password stored as a bcrypt hash, plus a one-time email code.</p></div>
+      <div class="secgov-gate"><div class="secgov-k"><span class="secgov-gate-ic"><i data-lucide="id-card"></i></span><span>02</span></div><h3>What’s your role?</h3><p>Client, consultant, practice admin or platform admin.</p></div>
+      <div class="secgov-gate"><div class="secgov-k"><span class="secgov-gate-ic"><i data-lucide="building"></i></span><span>03</span></div><h3>Which practice?</h3><p>Organisation context from your token, enforced again in the database.</p></div>
+      <div class="secgov-gate"><div class="secgov-k"><span class="secgov-gate-ic"><i data-lucide="user-check"></i></span><span>04</span></div><h3>Is this record yours?</h3><p>Consultants see only the clients assigned to them.</p></div>
+      <div class="secgov-gate"><div class="secgov-k"><span class="secgov-gate-ic"><i data-lucide="link-2"></i></span><span>05</span></div><h3>Deliver securely</h3><p>Streamed through the API or a short-lived signed link — and logged.</p></div>
+      <div class="secgov-result"><i data-lucide="file-check-2"></i><b>Document opened</b><span>Recorded in the audit log</span></div>
+    </div>
+    <div class="secgov-roles reveal"><span class="secgov-roles-t">Least privilege</span>
+      <span class="secgov-role"><b>Client</b><span>own application</span></span>
+      <span class="secgov-role"><b>Consultant</b><span>assigned clients</span></span>
+      <span class="secgov-role"><b>Practice admin</b><span>own practice</span></span>
+      <span class="secgov-role"><b>Platform admin</b><span>restricted operators</span></span>
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt" id="governance">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="eyebrow"><span class="num">03</span> Governance</span><h2 class="h2">Clear walls. Clear responsibilities.</h2></div>
+    <div class="secgov-two">
+      <div class="secgov-card reveal">
+        <h3>Your practice is walled off.</h3>
+        <p>Many practices share the platform, but never each other’s data. Separation is enforced twice — not by a filter on the screen.</p>
+        <div class="secgov-iso" role="img" aria-label="Practice A and Practice B records separated by database row-level security">
+          <div class="secgov-ten"><div class="secgov-th"><i>A</i>Your practice</div>
+            <div class="secgov-rec"><i data-lucide="file-text"></i>A. N•••••<span class="secgov-m">Subclass 190</span></div>
+            <div class="secgov-rec"><i data-lucide="file-text"></i>R. P•••••<span class="secgov-m">Subclass 820</span></div>
+            <div class="secgov-rec"><i data-lucide="file-text"></i>S. K•••••<span class="secgov-m">Subclass 500</span></div>
+          </div>
+          <div class="secgov-wall"><span class="secgov-sh-ic"><i data-lucide="shield"></i></span></div>
+          <div class="secgov-ten" style="opacity:.55"><div class="secgov-th"><i>B</i>Another practice</div>
+            <div class="secgov-rec"><i data-lucide="lock"></i>••••••••<span class="secgov-m">hidden</span></div>
+            <div class="secgov-rec"><i data-lucide="lock"></i>••••••••<span class="secgov-m">hidden</span></div>
+            <div class="secgov-rec"><i data-lucide="lock"></i>••••••••<span class="secgov-m">hidden</span></div>
+          </div>
         </div>
-        <p class="xs muted" data-opt-out>Primary storage, backups and processing boundaries for Australia are documented in your agreement.</p>
+        <div class="secgov-iso-cap">
+          <div><b>Application</b>Organisation context on every request</div>
+          <div><b>Database</b>SQL Row-Level Security on every query</div>
+          <div><b>Background jobs</b>Reminders run per practice</div>
+        </div>
       </div>
-      <div class="panel span-3" id="backups" data-options>
-        <div class="panel-head"><div><h3 class="h3">Monthly automatic backup</h3><p>Destination selected by your practice.</p></div><i data-lucide="hard-drive-download" style="width:18px;height:18px;color:var(--muted)"></i></div>
-        <div class="options" role="radiogroup" aria-label="Backup destination">
-          <button class="opt" role="radio" aria-checked="true" data-out="Next backup · Sun 1 Nov 2026 · 2:00 am AEDT → Microsoft OneDrive / SharePoint"><span class="radio"></span><span class="grow">Microsoft OneDrive / SharePoint</span></button>
-          <button class="opt" role="radio" aria-checked="false" data-out="Next backup · Sun 1 Nov 2026 · 2:00 am AEDT → Google Drive"><span class="radio"></span><span class="grow">Google Drive</span></button>
-          <button class="opt" role="radio" aria-checked="false" data-out="Next backup · Sun 1 Nov 2026 · 2:00 am AEDT → other supported destination"><span class="radio"></span><span class="grow">Other supported destination</span></button>
+      <div class="secgov-card reveal">
+        <h3>Security is shared — and spelled out.</h3>
+        <p>Microsoft secures the cloud, we secure the application, and you manage your people.</p>
+        <div class="secgov-stack" role="img" aria-label="Shared responsibility: Microsoft, HighVolt, and your practice">
+          <div class="secgov-layer secgov-l1"><div class="secgov-who"><i data-lucide="users"></i>Your practice</div><ul><li>Staff accounts &amp; roles</li><li>Remove leavers</li><li>Devices &amp; passwords</li><li>Internal procedures</li></ul></div>
+          <div class="secgov-layer secgov-l2"><div class="secgov-who"><i data-lucide="code-xml"></i>HighVolt</div><ul><li>Access logic</li><li>Practice isolation</li><li>Secure releases</li><li>Azure configuration</li><li>Monitoring</li></ul></div>
+          <div class="secgov-layer secgov-l3"><div class="secgov-who"><i data-lucide="cloud"></i>Microsoft</div><ul><li>Data centres in Australia</li><li>Physical security</li><li>Managed services</li><li>Encryption platform</li></ul></div>
         </div>
-        <p class="xs muted" data-opt-out>Next backup · Sun 1 Nov 2026 · 2:00 am AEDT → Microsoft OneDrive / SharePoint</p>
       </div>
     </div>
-    <p class="xs muted mt-4">Supported destinations, backup scope, format and restoration steps are confirmed during onboarding.</p>
   </div>
 </section>
 
-<section class="section section--alt" id="security">
-  <div class="wrap-narrow">
-    <div class="sec-head"><span class="eyebrow"><span class="num">06</span> Security</span><h2 class="h2">What is stored, processed, retained and exported.</h2><p class="lead">Plain answers, so your practice can meet its privacy and record-keeping obligations.</p></div>
-    <div class="table-wrap"><table class="data-table">
-      <thead><tr><th>Area</th><th>What it means</th></tr></thead>
-      <tbody>
-        <tr><td>Stored</td><td>Client and matter records, documents, the communications you connect, settings and the audit log — in your tenant’s hosting region.</td></tr>
-        <tr><td>Processed</td><td>AI reads only the email accounts and documents you authorise, to classify, check, extract and draft. Processing locations, including AI inference and subprocessors, are documented in your agreement.</td></tr>
-        <tr><td>Retained</td><td>According to your practice’s retention settings and your record-keeping obligations as a migration practice.</td></tr>
-        <tr><td>Exported</td><td>Audit logs on demand, monthly backups to your selected destination, and a full data export on request or exit.</td></tr>
-        <tr><td>Access</td><td>Role-based permissions for practice owners, registered migration agents, case officers and scoped sponsor HR users.</td></tr>
-        <tr><td>Privacy</td><td>Designed to support your obligations under the <i>Privacy Act 1988</i> and the Australian Privacy Principles. Personal information is masked in all public product imagery.</td></tr>
-      </tbody>
-    </table></div>
-    <div class="note-box mt-8"><i data-lucide="file-text"></i><span>Need detail for your own risk assessment? We provide security and data-handling documentation on request. <a class="link" href="/support#contact">Contact us</a></span></div>
+<section class="section" style="padding-bottom:clamp(40px,5vw,64px)">
+  <div class="wrap">
+    <div class="secgov-scope reveal">
+      <div>
+        <span class="eyebrow">Straight answers</span>
+        <h2 class="h2" style="margin-top:12px">Evaluating us for procurement?</h2>
+        <p>We’ll walk your team through the architecture and complete your security questionnaire. We don’t currently hold ISO 27001, SOC 2 or IRAP certification, and we won’t claim to. Optional third-party integrations, such as payments and messaging, follow each provider’s own terms.</p>
+        <div class="btn-row" style="margin-top:22px">
+          <a class="btn btn--primary" href="mailto:ram@highvolt.tech?subject=Security%20briefing%20request"><i data-lucide="calendar"></i>Request a security briefing</a>
+          <a class="btn btn--ghost" href="mailto:ram@highvolt.tech?subject=Security%20questionnaire">Send a questionnaire</a>
+        </div>
+      </div>
+      <div class="secgov-ask">
+        <div><i data-lucide="check"></i>Architecture and hosting walkthrough</div>
+        <div><i data-lucide="check"></i>Encryption and access-control detail</div>
+        <div><i data-lucide="check"></i>AI and integration data flows</div>
+        <div><i data-lucide="check"></i>Retention, deletion and recovery terms</div>
+        <div><i data-lucide="check"></i>Security questionnaires</div>
+      </div>
+    </div>
+    <p class="xs muted" style="margin-top:28px">Last reviewed November 2026 · Describes the production environment. Read alongside your customer agreement. Security &amp; privacy enquiries: <a class="link" href="mailto:ram@highvolt.tech" style="display:inline">ram@highvolt.tech</a></p>
   </div>
 </section>
-
-<section class="section--tight">
-  <div class="wrap"><div class="cta-band"><div><h2 class="h2">Explore the controls with your settings.</h2><p>We’ll configure a demonstration tenant around your practice rules.</p></div><div class="btn-row"><a class="btn btn--primary btn--lg" href="/book-demo">Book a Demo</a></div></div></div>
-</section>
+</div>

@@ -38,9 +38,9 @@ export const PAGES = [
   {
     path: '/ai-control-security',
     html: AiControlSecurity,
-    title: 'AI Control & Security — Quantum Visa Manager',
+    title: 'Security & Governance — Quantum Visa Manager',
     description:
-      'AI Control Matrix toggles, consultant approval gates, configurable workflows, AI and human audit trail export, Australian data residency, tenant hosting choices and monthly backups.',
+      'How Quantum Visa Manager protects client information: microservices on Microsoft Azure, hosted in Australia, encrypted end to end, with organisation-level isolation.',
   },
   {
     path: '/solutions',

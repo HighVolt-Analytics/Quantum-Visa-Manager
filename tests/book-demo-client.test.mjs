@@ -132,63 +132,15 @@ describe('booking request', () => {
     assert.equal('country' in p.answers, false)
     assert.equal('timeZone' in p, false)
     fd.set('timeZone', 'Australia/Sydney')
-    fd.set('state', 'NSW')
     const v2 = buildBookingPayload({ form: fd, slotStart: '2026-10-26T23:00:00.000Z', turnstileToken: 'tok', idempotencyKey: 'k', includeCountry: true })
     assert.equal(v2.answers.country, 'AU')
-    assert.equal(v2.answers.state, 'NSW')
     assert.equal(v2.timeZone, 'Australia/Sydney')
-    assert.equal('state' in buildBookingPayload({ form: fd, slotStart: 's', turnstileToken: 't', idempotencyKey: 'k' }).answers, false)
-  })
-
-  it('requires state on v2 payloads and resets region options per country', () => {
-    assert.deepEqual(regionsForCountry('AU')?.slice(0, 3), ['NSW', 'VIC', 'QLD'])
-    assert.ok(regionsForCountry('IN')?.includes('Maharashtra'))
-    assert.equal(regionsForCountry('ZZ'), null)
-    const fd = new FormData()
-    for (const [k, v] of Object.entries({
-      size: 'Sole agent',
-      system: 'Spreadsheets, email and shared drives',
-      systemName: '',
-      bottleneck: 'after-hours enquiries',
-      first: 'Ada',
-      last: 'Lovelace',
-      email: 'ada@example.test',
-      phone: '',
-      org: 'Example Pty Ltd',
-      country: 'AU',
-      state: '',
-      timeZone: 'Australia/Sydney',
-      consent: 'yes',
-    })) fd.set(k, v)
-    const missing = buildBookingPayload({
-      form: fd,
-      slotStart: '2026-10-26T23:00:00.000Z',
-      turnstileToken: 'tok',
-      idempotencyKey: 'k',
-      includeCountry: true,
-    })
-    assert.equal(missing.answers.state, '')
-    fd.set('state', 'NSW')
-    const ok = buildBookingPayload({
-      form: fd,
-      slotStart: '2026-10-26T23:00:00.000Z',
-      turnstileToken: 'tok',
-      idempotencyKey: 'k',
-      includeCountry: true,
-    })
-    assert.equal(ok.answers.state, 'NSW')
-    fd.set('country', 'IN')
-    fd.set('state', 'Maharashtra')
-    assert.equal(
-      buildBookingPayload({
-        form: fd,
-        slotStart: '2026-10-26T23:00:00.000Z',
-        turnstileToken: 'tok',
-        idempotencyKey: 'k',
-        includeCountry: true,
-      }).answers.state,
-      'Maharashtra',
-    )
+    assert.equal('state' in v2.answers, false)
+    assert.equal('sponsorshipTeam' in v2.answers, false)
+    fd.set('sponsorshipTeam', 'yes')
+    const withTeam = buildBookingPayload({ form: fd, slotStart: '2026-10-26T23:00:00.000Z', turnstileToken: 'tok', idempotencyKey: 'k', includeCountry: true })
+    assert.equal(withTeam.answers.sponsorshipTeam, true)
+    assert.equal(withTeam.answers.size, '2–5')
   })
 
   it('reuses an idempotency key only for an identical retry', () => {
@@ -291,7 +243,9 @@ describe('Book a Demo page markup', async () => {
   it('keeps the four original questionnaire sections', () => {
     for (const legend of ['Practice size', 'Current system', 'Biggest bottleneck', 'Contact details']) assert.ok(html.includes(legend), legend)
     for (const name of ['name="size"', 'name="system"', 'name="systemName"', 'name="bottleneck"', 'name="first"', 'name="last"', 'name="email"', 'name="phone"', 'name="org"', 'name="consent"']) assert.ok(html.includes(name), name)
-    // Country and state are injected for v2 only (keeps v1 HTML unchanged).
+    assert.match(html, /type="checkbox" name="sponsorshipTeam"/)
+    assert.ok(!html.includes('value="Corporate HR / sponsorship team"'))
+    // Country is injected for v2 only; state/province is not collected.
     assert.ok(!html.includes('name="state"'))
     assert.equal(html.includes('name="country"'), false)
     assert.equal(html.includes('name="timeZone"'), false)
@@ -300,15 +254,13 @@ describe('Book a Demo page markup', async () => {
     assert.ok(html.includes('Unable to book a demo?'))
   })
 
-  it('v2 booking script injects a required country-dependent state field named state', async () => {
+  it('v2 booking script does not inject a state or province field', async () => {
     const script = await readFile(new URL('../src/lib/bookDemo.js', import.meta.url), 'utf8')
-    assert.match(script, /ensureStateField/)
-    assert.match(script, /name:\s*['"]state['"]/)
-    assert.match(script, /regionsForCountry/)
-    assert.match(script, /_setCountry/)
-    assert.match(script, /Please enter your state or province/)
-    assert.match(script, /\.get\(['"]state['"]\)/)
-    assert.match(script, /markInvalid\(\[['"]state['"]\]\)/)
+    assert.equal(script.includes('ensureStateField'), false)
+    assert.equal(script.includes('regionsForCountry'), false)
+    assert.equal(script.includes('State / Province'), false)
+    assert.equal(script.includes('state or province'), false)
+    assert.match(script, /ensureCountryField/)
   })
 
   it('exposes curated regions and a short timezone chooser without dumping every IANA zone', () => {

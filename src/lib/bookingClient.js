@@ -265,14 +265,12 @@ function zoneOffsetMinutes(date, zone) {
 
 const FIELD_NAMES = ['size', 'system', 'systemName', 'bottleneck', 'first', 'last', 'email', 'phone', 'org']
 
-/** Builds the exact request body the booking API validates. Country, state, and timezone are sent only for v2. */
+/** Builds the exact request body the booking API validates. Country and timezone are sent only for v2. */
 export function buildBookingPayload({ form, slotStart, turnstileToken, idempotencyKey, includeCountry = false }) {
   const answers = {}
   for (const name of FIELD_NAMES) answers[name] = String(form.get(name) ?? '').trim()
-  if (includeCountry) {
-    answers.country = String(form.get('country') ?? '').trim()
-    answers.state = String(form.get('state') ?? '').trim()
-  }
+  if (includeCountry) answers.country = String(form.get('country') ?? '').trim()
+  if (form.get('sponsorshipTeam') === 'yes') answers.sponsorshipTeam = true
   answers.consent = form.get('consent') === 'yes'
   const payload = { idempotencyKey, slotStart, turnstileToken, answers }
   if (includeCountry) payload.timeZone = String(form.get('timeZone') ?? '').trim()
