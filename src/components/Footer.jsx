@@ -42,7 +42,7 @@ export default function Footer() {
               ['Document & Checklist', '/platform#documents'],
               ['Form Preparation', '/platform#forms'],
               ['Visa Library', '/platform#library'],
-              ['AI Control', '/ai-control-security'],
+              ['Security & Governance', '/ai-control-security'],
             ]}
           />
           <Col
@@ -71,7 +71,7 @@ export default function Footer() {
             items={[
               ['Support', '/support'],
               ['Product status', '/support#status'],
-              ['Security', '/ai-control-security#security'],
+              ['Security', '/ai-control-security'],
               ['Data residency', '/ai-control-security#residency'],
               ['Privacy', '/privacy'],
               ['Terms', '/terms'],
@@ -96,7 +96,7 @@ export default function Footer() {
           <nav aria-label="Legal">
             <Link to="/privacy">Privacy</Link>
             <Link to="/terms">Terms</Link>
-            <Link to="/ai-control-security#security">Security</Link>
+            <Link to="/ai-control-security">Security</Link>
             <Link to="/ai-control-security#residency">Data residency</Link>
             <Link to="/support">Support</Link>
           </nav>

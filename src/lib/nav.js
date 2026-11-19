@@ -8,7 +8,7 @@ export const NAV = [
       ['Correspondence & Tasks', '/platform#correspondence', 'Department and client email to action'],
       ['Document & Checklist Automation', '/platform#documents', 'Check, file and update automatically'],
       ['Form Preparation', '/platform#forms', 'Mapping and browser-assisted prefill'],
-      ['AI Control & Security', '/ai-control-security', 'Your rules, audit trail and data residency'],
+      ['Security & Governance', '/ai-control-security', 'Azure hosting, access control and practice isolation'],
     ],
   },
   {
