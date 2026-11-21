@@ -23,6 +23,7 @@ export const NAV = [
     ],
   },
   { t: 'How It Works', h: '/how-it-works', key: 'how' },
+  { t: 'Data Security', h: '/ai-control-security', key: 'security' },
   { t: 'Pricing', h: '/pricing', key: 'pricing' },
   { t: 'Resources', h: '/resources', key: 'resources' },
 ]

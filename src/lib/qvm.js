@@ -1,5 +1,6 @@
 /* Quantum Visa Manager — shared site script */
 import { setupBooking } from './bookDemo.js';
+import { mountHubGlobe } from './hubGlobe.js';
 
 (() => {
   const $ = (s, r = document) => r.querySelector(s);
@@ -13,7 +14,7 @@ import { setupBooking } from './bookDemo.js';
   window.QVM = { I, icons, T };
 
   /* ------------------------------------------------------------------ Logo */
-  const LOGO = `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="15" cy="15" r="11" stroke="currentColor" stroke-width="2.4"/><path d="M10.4 15.2l3.3 3.3 8.6-8.6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M22.6 22.6l5 5" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/></svg>`;
+  const LOGO = `<img src="/assets/logo.png" alt="" width="32" height="32" decoding="async">`;
 
   /* ------------------------------------------------------------ Navigation */
   const NAV = [
@@ -31,6 +32,7 @@ import { setupBooking } from './bookDemo.js';
       ['Skills Assessment', 'solutions.html#skills', 'ANZSCO and assessment steps', 'soon'],
     ] },
     { t: 'How It Works', h: 'how-it-works.html', key: 'how' },
+    { t: 'Data Security', h: 'ai-control-security.html', key: 'security' },
     { t: 'Pricing', h: 'pricing.html', key: 'pricing' },
     { t: 'Resources', h: 'resources.html', key: 'resources' },
   ];
@@ -212,7 +214,7 @@ import { setupBooking } from './bookDemo.js';
       'The Subclass 190 checklist updates. The missing item gets a reminder.',
       'Two documents wait for your review. Nothing is accepted without you.',
     ];
-    el.innerHTML = `<div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-title">${LOGO.replace('<svg', '<svg width="13" height="13"')}Matter VM-2041 · Skilled Nominated (Subclass 190)</div><span class="tag" style="font-size:10.5px">Live workflow</span></div>
+    el.innerHTML = `<div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-title"><img src="/assets/logo.png" alt="" width="13" height="13" decoding="async">Matter VM-2041 · Skilled Nominated (Subclass 190)</div><span class="tag" style="font-size:10.5px">Live workflow</span></div>
       <div class="flow">
         <div class="flow-col"><div class="ui-label"><span class="step-n">1</span>Incoming</div>
           <div class="mail" data-f="mail"><div class="mail-head"><span class="avatar">AN</span><div><b>A. N•••••</b><small>Client · 9:02 am</small></div></div>
@@ -282,7 +284,7 @@ import { setupBooking } from './bookDemo.js';
   ];
 
   function problems(el) {
-    el.innerHTML = `<div class="p-list" role="tablist" aria-orientation="vertical">${PROBLEMS.map((p, i) => `<div class="p-item"><button class="p-btn" role="tab" id="pt${i}" aria-controls="pdetail" aria-selected="false"><span class="n">0${i + 1}</span><span class="t">${p.t}</span><span class="chev"><svg viewBox="0 0 6 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l4 4-4 4"/></svg></span></button><div class="p-inline"></div></div>`).join('')}</div><div class="p-stage"></div>`;
+    el.innerHTML = `<div class="p-list" role="tablist" aria-orientation="vertical">${PROBLEMS.map((p, i) => `<div class="p-item" id="problem-${i}"><button class="p-btn" role="tab" id="pt${i}" aria-controls="pdetail" aria-selected="false"><span class="n">0${i + 1}</span><span class="t">${p.t}</span><span class="chev"><svg viewBox="0 0 6 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l4 4-4 4"/></svg></span></button><div class="p-inline"></div></div>`).join('')}</div><div class="p-stage"></div>`;
     const detail = document.createElement('div'); detail.id = 'pdetail'; detail.setAttribute('role', 'tabpanel');
     const stage = $('.p-stage', el); let clip, cur = -1;
     const mq = matchMedia('(min-width: 980px)');
@@ -301,9 +303,17 @@ import { setupBooking } from './bookDemo.js';
       place();
       if (focus) $$('.p-btn', el)[i].focus();
     };
+    el._selectProblem = select;
+    window.QVM.selectProblem = (i) => {
+      const idx = Math.max(0, Math.min(PROBLEMS.length - 1, +i || 0));
+      select(idx, true);
+      const target = $(`#problem-${idx}`, el) || el;
+      target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    };
     $$('.p-btn', el).forEach((b, i) => { b.addEventListener('click', () => select(i)); b.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); select((i + (e.key === 'ArrowDown' ? 1 : 5)) % 6, true); } }); });
     mq.addEventListener('change', place);
-    select(0);
+    const hashMatch = location.hash.match(/^#problem-(\d+)$/);
+    select(hashMatch ? +hashMatch[1] : 0);
   }
 
   /* -------------------------------------------------------------- Difference */
@@ -591,6 +601,229 @@ import { setupBooking } from './bookDemo.js';
     });
   }
 
+  /* ------------------------------------------------------- Hero inline video */
+  function heroVideo(el) {
+    if (el.dataset.bound === '1') return;
+    el.dataset.bound = '1';
+    const id = el.dataset.youtubeId;
+    const overlay = $('.hero-video__overlay', el);
+    const mount = $('.hero-video__iframe', el);
+    if (!id || !overlay || !mount || !/^[\w-]{6,}$/.test(id)) return;
+    const play = () => {
+      if (el.classList.contains('is-playing')) return;
+      mount.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&color=white&playsinline=1" title="Overview walkthrough" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe>`;
+      el.classList.add('is-playing');
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.tabIndex = -1;
+    };
+    overlay.addEventListener('click', play);
+  }
+
+  /* ----------------------------------------------- Visa orbit (from Quantum Agent) */
+  const orbitIcon = (name) => `<i data-lucide="${name}" class="visa-orbit__glyph" aria-hidden="true"></i>`;
+  const ORBIT_ICONS = {
+    missing: orbitIcon('file-warning'),
+    sponsor: orbitIcon('building-2'),
+    clash: orbitIcon('git-compare'),
+    scan: orbitIcon('scan-search'),
+    versions: orbitIcon('files'),
+    retype: orbitIcon('keyboard'),
+    actions: orbitIcon('list-todo'),
+    rules: orbitIcon('scale'),
+  };
+  const ORBIT_ITEMS = [
+    { id: 'missing-evidence', no: '01', title: 'Missing evidence', label: 'Missing evidence', branch: 'I am still chasing documents', short: 'Missing client answers and evidence hold the matter open.', solution: 'Evaluation forms, checklists and approved reminders.', color: '#5FA882', colorDark: '#3EE8C4', icon: ORBIT_ICONS.missing, problem: 0 },
+    { id: 'sponsor-docs', no: '02', title: 'Sponsor documents', label: 'Sponsor docs', branch: 'I am still chasing documents', short: 'Waiting on sponsor packs before the nomination can move.', solution: 'Sponsor checklists, reusable evidence and follow-ups.', color: '#4A9470', colorDark: '#2EE6FF', icon: ORBIT_ICONS.sponsor, problem: 0 },
+    { id: 'details-clash', no: '03', title: 'Details clash', label: 'Details clash', branch: 'The details do not match', short: 'Conflicting names, dates and histories need a human check.', solution: 'AI discrepancy flags for consultant review.', color: '#D4896A', colorDark: '#FF8A55', icon: ORBIT_ICONS.clash, problem: 1 },
+    { id: 'bad-scans', no: '04', title: 'Unclear documents', label: 'Bad scans', branch: 'The details do not match', short: 'Unclear scans, incomplete or expired documents block progress.', solution: 'Document checks and expiry tracking.', color: '#C46F55', colorDark: '#FF6EAE', icon: ORBIT_ICONS.scan, problem: 1 },
+    { id: 'latest-version', no: '05', title: 'Latest version', label: 'Latest file', branch: 'I keep doing the same work', short: 'Finding attachments and the latest version wastes hours.', solution: 'Email monitoring, automatic filing and version history.', color: '#C4A24A', colorDark: '#FFC83D', icon: ORBIT_ICONS.versions, problem: 0 },
+    { id: 'retyping', no: '06', title: 'Retyping forms', label: 'Retyping', branch: 'I keep doing the same work', short: 'Retyping client information into forms invites errors.', solution: 'Accepted-data mapping and form prefill.', color: '#B8923E', colorDark: '#4DB8FF', icon: ORBIT_ICONS.retype, problem: 2 },
+    { id: 'open-actions', no: '07', title: 'Open actions', label: 'Open actions', branch: 'I am worried something is missed', short: 'Department requests and outstanding actions can slip.', solution: 'Email-to-task, owners, due dates and pipeline blockers.', color: '#8B74D4', colorDark: '#B07CFF', icon: ORBIT_ICONS.actions, problem: 3 },
+    { id: 'rule-changes', no: '08', title: 'Rule changes', label: 'Rule changes', branch: 'I am worried something is missed', short: 'Visa requirements and forms change without notice.', solution: 'Gov Sync and updates after consultant approval.', color: '#6F5CB8', colorDark: '#8090FF', icon: ORBIT_ICONS.rules, problem: 4 },
+  ];
+
+  function visaOrbit(root) {
+    if (root.dataset.bound === '1') return;
+    root.dataset.bound = '1';
+    const stage = $('.visa-orbit__stage', root);
+    const orbit = $('.visa-orbit__orbit', root);
+    const dock = $('.visa-orbit__detail--dock', root);
+    if (!stage || !orbit) return;
+    const globe = $('.visa-orbit__hub-globe', root);
+    if (globe) mountHubGlobe(globe, reduce);
+
+    const n = ORBIT_ITEMS.length;
+    const rotateMs = 900;
+    const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2);
+    const norm = (deg) => { const x = deg % 360; return x < 0 ? x + 360 : x; };
+    const delta = (from, to) => { let d = norm(to) - norm(from); if (d > 180) d -= 360; if (d < -180) d += 360; return d; };
+    const targetFor = (i, top) => norm(top - (i / n) * 360);
+
+    let idx = -1;
+    let expanded = false;
+    let mobile = false;
+    let topAngle = 0;
+    let rotation = 0;
+    let raf = 0;
+    let gen = 0;
+
+    const setRotation = (deg) => {
+      rotation = norm(deg);
+      orbit.style.setProperty('--current-rotation', `${rotation}deg`);
+    };
+    const setRadius = (px) => {
+      orbit.style.setProperty('--orbit-radius', `${px}px`);
+    };
+    const detailHtml = (item) => `
+      <p class="visa-orbit__detail-kicker">${item.no} · ${item.title}</p>
+      <p class="visa-orbit__detail-sub">${item.branch}</p>
+      <p class="visa-orbit__detail-para">${item.short}</p>
+      <div class="visa-orbit__solution">
+        <span class="visa-orbit__solution-label">QVM solution</span>
+        <p>${item.solution}</p>
+      </div>
+      <a class="btn btn--primary visa-orbit__cta" href="#problem-${item.problem}" data-orbit-solution="${item.problem}">See the solution</a>`;
+
+    orbit.insertAdjacentHTML('beforeend', ORBIT_ITEMS.map((item, i) => `
+      <div class="visa-orbit__node" data-orbit-i="${i}" style="--item-angle:${(i / n) * 360}deg;--orbit-color:${item.color}">
+        <button type="button" class="visa-orbit__node-btn" aria-pressed="false" aria-label="${item.no} ${item.title}">
+          <span class="visa-orbit__icon">${item.icon}</span>
+          <span class="visa-orbit__heading-label">${item.label}</span>
+        </button>
+        <div class="visa-orbit__detail visa-orbit__detail--inline" aria-hidden="true">${detailHtml(item)}</div>
+      </div>`).join(''));
+    root.addEventListener('click', (e) => {
+      const cta = e.target.closest('[data-orbit-solution]');
+      if (!cta) return;
+      e.preventDefault();
+      const problem = cta.getAttribute('data-orbit-solution');
+      if (window.QVM && typeof window.QVM.selectProblem === 'function') {
+        window.QVM.selectProblem(problem);
+      } else {
+        location.hash = `#problem-${problem}`;
+      }
+    });
+
+    const nodes = $$('.visa-orbit__node', orbit);
+    const orbitColor = (item) => (document.documentElement.getAttribute('data-theme') === 'dark' ? (item.colorDark || item.color) : item.color);
+    const syncColors = () => {
+      nodes.forEach((node, i) => {
+        const item = ORBIT_ITEMS[i];
+        const c = orbitColor(item);
+        node.style.setProperty('--orbit-color', c);
+      });
+      if (dock && idx >= 0) dock.style.setProperty('--orbit-color', orbitColor(ORBIT_ITEMS[idx]));
+    };
+    syncColors();
+    new MutationObserver(syncColors).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    const stop = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    };
+    const paint = (active, open) => {
+      idx = active;
+      expanded = open;
+      stage.classList.toggle('is-expanded', open);
+      nodes.forEach((node, i) => {
+        const on = i === active && open;
+        node.classList.toggle('is-expanded', on);
+        const btn = $('.visa-orbit__node-btn', node);
+        const inline = $('.visa-orbit__detail--inline', node);
+        btn && btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        inline && inline.setAttribute('aria-hidden', on ? 'false' : 'true');
+      });
+      if (dock) {
+        if (active < 0 || !open) {
+          dock.innerHTML = '';
+          dock.classList.remove('is-open');
+          dock.setAttribute('aria-hidden', 'true');
+        } else {
+          const item = ORBIT_ITEMS[active];
+          dock.innerHTML = detailHtml(item);
+          dock.style.setProperty('--orbit-color', orbitColor(item));
+          dock.classList.toggle('is-open', mobile);
+          dock.setAttribute('aria-hidden', mobile ? 'false' : 'true');
+        }
+      }
+    };
+    const select = (at) => {
+      if (at === idx && expanded) {
+        stop();
+        gen += 1;
+        paint(at, false);
+        return;
+      }
+      stop();
+      const token = ++gen;
+      if (expanded && idx !== at) paint(idx, false);
+      const from = rotation;
+      const to = targetFor(at, topAngle);
+      const d = delta(from, to);
+      if (reduce || Math.abs(d) < 0.4) {
+        setRotation(to);
+        paint(at, true);
+        return;
+      }
+      idx = at;
+      const t0 = performance.now();
+      const tick = (now) => {
+        if (token !== gen) return;
+        const p = Math.min(1, (now - t0) / rotateMs);
+        setRotation(from + d * ease(p));
+        if (p < 1) { raf = requestAnimationFrame(tick); return; }
+        setRotation(to);
+        paint(at, true);
+      };
+      raf = requestAnimationFrame(tick);
+    };
+    const layout = () => {
+      const w = window.innerWidth;
+      mobile = w < 900;
+      topAngle = mobile ? 90 : 0;
+      if (w < 380) setRadius(104);
+      else if (w < 520) setRadius(118);
+      else if (w < 768) setRadius(146);
+      else if (w < 900) setRadius(170);
+      else if (w < 1100) setRadius(188);
+      else setRadius(210);
+    };
+
+    nodes.forEach((node, i) => {
+      $('.visa-orbit__node-btn', node)?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        select(i);
+      });
+    });
+
+    const closeExpanded = () => {
+      if (!expanded || idx < 0) return;
+      stop();
+      gen += 1;
+      paint(idx, false);
+    };
+    const closeOutside = (e) => {
+      if (!expanded || idx < 0) return;
+      const active = nodes[idx];
+      if (active && active.contains(e.target)) return;
+      if (dock && dock.contains(e.target)) return;
+      if (e.target.closest?.('.visa-orbit__node-btn')) return;
+      closeExpanded();
+    };
+    document.addEventListener('pointerdown', closeOutside, true);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeExpanded();
+    });
+
+    layout();
+    setRotation(0);
+    paint(-1, false);
+    window.addEventListener('resize', () => {
+      layout();
+      if (idx >= 0) setRotation(targetFor(idx, topAngle));
+      paint(idx, expanded);
+    });
+  }
+
   /* ------------------------------------------------------- Video section tabs */
   function videoTabs(root) {
     const tabs = $$('[data-video-tab]', root);
@@ -644,6 +877,8 @@ import { setupBooking } from './bookDemo.js';
     root.dataset.qvmBooted = '1';
     const scope = (sel) => $$(sel, root);
     scope('[data-hero-flow]').forEach(heroFlow);
+    scope('[data-hero-video]').forEach(heroVideo);
+    scope('[data-visa-orbit]').forEach(visaOrbit);
     scope('[data-problems]').forEach(problems);
     scope('[data-diff]').forEach(difference);
     scope('[data-journey]').forEach(journey);
