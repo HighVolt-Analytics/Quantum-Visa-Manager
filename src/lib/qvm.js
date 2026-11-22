@@ -674,7 +674,6 @@ import { mountHubGlobe } from './hubGlobe.js';
     let topAngle = 0;
     let rotation = 0;
     let raf = 0;
-    let idleRaf = 0;
     let gen = 0;
 
     const setRotation = (deg) => {
@@ -837,9 +836,9 @@ import { mountHubGlobe } from './hubGlobe.js';
     const idle = () => {
       if (!orbit.isConnected) return;
       if (!reduce && visible && !expanded && !selecting) setRotation(rotation + 0.1);
-      idleRaf = requestAnimationFrame(idle);
+      requestAnimationFrame(idle);
     };
-    if (!reduce) idleRaf = requestAnimationFrame(idle);
+    if (!reduce) requestAnimationFrame(idle);
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver((entries) => {
         visible = entries.some((entry) => entry.isIntersecting);
