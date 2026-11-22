@@ -371,6 +371,7 @@ body.nav-open { overflow: hidden; }
   overflow: visible;
 }
 .visa-orbit__stage {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -380,7 +381,6 @@ body.nav-open { overflow: hidden; }
   user-select: none;
   overflow: visible;
 }
-.visa-orbit__stage.is-expanded .visa-orbit__hub { opacity: .34; transform: scale(.92); }
 .visa-orbit__orbit-wrap {
   position: relative;
   width: min(520px, 80vw);
@@ -407,57 +407,34 @@ body.nav-open { overflow: hidden; }
   overflow: visible;
 }
 .visa-orbit__ripple {
+  --ripple: 59, 130, 246;
   position: absolute;
-  width: 92px;
-  height: 92px;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
   border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--accent) 6%, transparent) 0%,
-    color-mix(in srgb, var(--accent) 3%, transparent) 42%,
-    transparent 74%
-  );
-  box-shadow:
-    0 0 28px color-mix(in srgb, var(--accent) 10%, transparent),
-    0 0 1px color-mix(in srgb, #fff 50%, transparent);
+  border: 1px solid rgba(var(--ripple), .22);
+  background: rgba(var(--ripple), .015);
+  box-shadow: 0 0 18px rgba(var(--ripple), .08);
   opacity: 0;
-  filter: blur(0.4px);
-  animation: visa-orbit-ripple 7.2s cubic-bezier(.22,.61,.36,1) infinite;
+  transform: translate(-50%, -50%);
+  animation: visa-orbit-ripple 4s cubic-bezier(0, .55, .45, 1) infinite;
   will-change: width, height, opacity;
 }
 .visa-orbit__ripple:nth-child(1) { animation-delay: 0s; }
-.visa-orbit__ripple:nth-child(2) { animation-delay: 1.2s; }
-.visa-orbit__ripple:nth-child(3) { animation-delay: 2.4s; }
-.visa-orbit__ripple:nth-child(4) { animation-delay: 3.6s; }
-.visa-orbit__ripple:nth-child(5) { animation-delay: 4.8s; }
-.visa-orbit__ripple:nth-child(6) { animation-delay: 6s; }
+.visa-orbit__ripple:nth-child(2) { animation-delay: 2s; }
 @keyframes visa-orbit-ripple {
   0% {
-    width: 92px;
-    height: 92px;
-    opacity: 0;
-    border-color: color-mix(in srgb, var(--accent) 18%, transparent);
-  }
-  8% {
-    opacity: .34;
-    border-color: color-mix(in srgb, var(--accent) 28%, transparent);
-  }
-  45% {
-    opacity: .16;
-    border-color: color-mix(in srgb, var(--accent) 14%, transparent);
+    width: 0;
+    height: 0;
+    opacity: .42;
   }
   100% {
-    width: calc(var(--orbit-radius) * 2.12);
-    height: calc(var(--orbit-radius) * 2.12);
+    width: calc(var(--orbit-radius) * 2);
+    height: calc(var(--orbit-radius) * 2);
     opacity: 0;
-    border-color: transparent;
   }
-}
-.visa-orbit__stage.is-expanded .visa-orbit__ripple {
-  animation-play-state: paused;
-  opacity: 0;
-  transition: opacity .35s ease;
 }
 .visa-orbit__track {
   position: absolute;
@@ -490,7 +467,7 @@ body.nav-open { overflow: hidden; }
   border-radius: 50%;
   pointer-events: none;
   z-index: 1;
-  animation: visa-orbit-sheen 16s linear infinite;
+  animation: visa-orbit-sheen 60s linear infinite;
 }
 .visa-orbit__highlight-wash,
 .visa-orbit__highlight-glow,
@@ -529,9 +506,7 @@ body.nav-open { overflow: hidden; }
   mask: radial-gradient(farthest-side, transparent calc(100% - 2.15px), #000 calc(100% - 0.85px));
 }
 .visa-orbit__stage.is-expanded .visa-orbit__highlight {
-  animation-play-state: paused;
-  opacity: .22;
-  transition: opacity .35s ease;
+  opacity: .72;
 }
 @keyframes visa-orbit-sheen {
   to { transform: rotate(360deg); }
@@ -630,7 +605,6 @@ body.nav-open { overflow: hidden; }
   will-change: transform;
 }
 .visa-orbit__node.is-expanded { z-index: 40; }
-.visa-orbit__stage.is-expanded .visa-orbit__node:not(.is-expanded) { opacity: .42; transition: opacity .35s ease; }
 .visa-orbit__node-btn {
   position: relative;
   display: grid;
@@ -653,7 +627,8 @@ body.nav-open { overflow: hidden; }
   border-radius: 50%;
   border: 0;
   color: #fff;
-  transform: scale(1);
+  --orbit-scale: 1;
+  transform: scale(var(--orbit-scale));
   transform-origin: center center;
   background:
     radial-gradient(circle at 32% 26%, rgba(255,255,255,.48) 0%, rgba(255,255,255,.1) 28%, transparent 52%),
@@ -679,26 +654,26 @@ body.nav-open { overflow: hidden; }
   transition: transform .5s cubic-bezier(.22,1,.36,1);
 }
 .visa-orbit__node.is-expanded .visa-orbit__icon {
-  transform: scale(1.38);
+  --orbit-scale: 2.15;
   border-color: transparent;
   box-shadow:
-    0 16px 32px rgba(40, 60, 90, .22),
-    0 5px 12px rgba(40, 60, 90, .12),
+    0 18px 36px rgba(40, 60, 90, .24),
+    0 6px 14px rgba(40, 60, 90, .14),
     inset 0 2px 2px rgba(255,255,255,.6),
     inset 0 -4px 8px color-mix(in srgb, var(--orbit-color, #3F8FD0) 45%, rgba(40,60,80,.28));
 }
 .visa-orbit__node.is-expanded .visa-orbit__icon .visa-orbit__glyph,
 .visa-orbit__node.is-expanded .visa-orbit__icon i,
 .visa-orbit__node.is-expanded .visa-orbit__icon svg {
-  transform: scale(0.95);
-  stroke-width: 1.75;
+  transform: scale(calc(1 / var(--orbit-scale)));
+  stroke-width: 2;
 }
 .visa-orbit__heading-label {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 18px);
   left: 50%;
   width: max-content;
-  max-width: 100px;
+  max-width: 118px;
   transform: translate(-50%);
   font-size: 10px;
   font-weight: 700;
@@ -708,120 +683,129 @@ body.nav-open { overflow: hidden; }
   line-height: 1.25;
   color: color-mix(in srgb, var(--orbit-color, #3F8FD0) 55%, var(--ink));
   pointer-events: none;
-  transition: opacity .25s ease;
+  transition: top .35s ease, opacity .25s ease;
 }
-.visa-orbit__node.is-expanded .visa-orbit__heading-label { opacity: 0; }
-.visa-orbit__detail--inline {
-  position: absolute;
-  left: calc(100% + 44px);
-  top: 50%;
-  width: min(280px, 36vw);
-  transform: translate3d(10px, -50%, 0);
+.visa-orbit__node.is-expanded .visa-orbit__heading-label {
   opacity: 0;
-  pointer-events: none;
-  z-index: 1;
-  text-align: left;
-  transition: opacity .35s ease .08s, transform .4s cubic-bezier(.22,1,.36,1) .08s;
 }
-.visa-orbit__node.is-expanded .visa-orbit__detail--inline {
-  opacity: 1;
+.visa-orbit__orbit-wrap { transition: transform .45s cubic-bezier(.22,1,.36,1); }
+.visa-orbit__stage.is-expanded .visa-orbit__orbit-wrap { transform: translateX(-36px); }
+.visa-orbit__detail--inline {
+  display: none;
+  position: absolute;
+  left: calc(100% + 52px);
+  top: 50%;
+  width: 260px;
+  max-width: 260px;
   transform: translate3d(0, -50%, 0);
+  z-index: 5;
+  text-align: left;
   pointer-events: auto;
 }
-.visa-orbit__detail-kicker {
-  margin: 0 0 6px;
-  font-size: clamp(17px, 1.6vw, 20px);
-  font-weight: 700;
-  letter-spacing: .03em;
-  text-transform: uppercase;
-  line-height: 1.2;
+.visa-orbit__node.is-expanded .visa-orbit__detail--inline {
+  display: block;
+  animation: visa-orbit-open .4s cubic-bezier(.22,1,.36,1);
+}
+@keyframes visa-orbit-open {
+  from { opacity: 0; transform: translate3d(18px, -50%, 0); }
+  to { opacity: 1; transform: translate3d(0, -50%, 0); }
+}
+.visa-orbit__panel {
+  display: grid;
+  justify-items: start;
+  width: 260px;
+  max-width: 260px;
+  gap: 0;
+  text-align: left;
+  user-select: text;
   color: var(--ink);
 }
-.visa-orbit__detail-sub {
+.visa-orbit__kicker {
   margin: 0 0 8px;
-  font-size: clamp(13px, 1.2vw, 15px);
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  line-height: 1.3;
-  color: color-mix(in srgb, var(--orbit-color, #3F8FD0) 58%, var(--ink));
-}
-.visa-orbit__detail-para {
-  margin: 0 0 18px;
   font-size: 13px;
-  line-height: 1.45;
-  color: var(--muted);
+  font-weight: var(--fw-medium);
+  letter-spacing: .04em;
+  color: var(--accent);
+}
+.visa-orbit__name {
+  margin: 0 0 18px;
+  font-size: 32px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  color: var(--ink);
+}
+.visa-orbit__problems {
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.visa-orbit__problems li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.visa-orbit__problems li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 .visa-orbit__solution {
-  margin: 4px 0 16px;
+  margin: 0 0 16px;
   padding: 12px 14px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--orbit-color, #3F8FD0) 16%, var(--surface));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-color, #3F8FD0) 32%, var(--line));
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-2);
 }
 .visa-orbit__solution-label {
   display: block;
   margin-bottom: 4px;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .08em;
+  font-size: 11px;
+  font-weight: var(--fw-medium);
+  letter-spacing: .06em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--orbit-color, #3F8FD0) 62%, var(--ink));
+  color: var(--muted);
 }
 .visa-orbit__solution p {
   margin: 0;
   font-size: 13px;
-  line-height: 1.4;
-  color: var(--ink);
-  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink-2);
 }
-.visa-orbit__cta {
-  width: 100%;
-  justify-content: center;
-  min-height: 40px;
-  font-size: 13px;
-}
+.visa-orbit__panel .btn { width: auto; justify-self: start; }
 .visa-orbit__detail--dock {
   display: none;
   position: relative;
-  width: min(320px, 90vw);
-  margin: 0;
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  pointer-events: none;
-  text-align: center;
-  transition: opacity .3s ease;
-}
-.visa-orbit__detail--dock.is-open {
-  max-height: none;
-  overflow: visible;
-  opacity: 1;
-  margin-top: 58px;
-  pointer-events: auto;
-}
-.visa-orbit__detail--dock .visa-orbit__detail-kicker,
-.visa-orbit__detail--dock .visa-orbit__detail-sub,
-.visa-orbit__detail--dock .visa-orbit__detail-para,
-.visa-orbit__detail--dock .visa-orbit__solution {
+  width: 260px;
+  max-width: 92%;
+  margin: 0 auto;
   text-align: left;
-  max-width: 300px;
-  margin-inline: auto;
+  color: var(--ink);
 }
-.visa-orbit__detail--dock .visa-orbit__cta {
-  max-width: 300px;
-  margin-inline: auto;
+.visa-orbit__detail--dock.is-open { display: none; }
+@media (min-width: 900px) and (max-width: 1099px) {
+  .visa-orbit__stage.is-expanded .visa-orbit__orbit-wrap { transform: translateX(-20px); }
+  .visa-orbit__detail--inline { left: calc(100% + 46px); }
 }
 @media (max-width: 899px) {
   .visa-orbit__orbit-wrap { width: min(390px, 84vw); }
+  .visa-orbit__stage.is-expanded .visa-orbit__orbit-wrap { transform: none; }
   .visa-orbit__detail--inline { display: none !important; }
-  .visa-orbit__detail--dock { display: block; }
+  .visa-orbit__detail--dock.is-open { display: block; margin-top: 28px; }
   .visa-orbit__node { --node-size: 42px; }
-  .visa-orbit__node.is-expanded .visa-orbit__icon { transform: scale(1.28); }
+  .visa-orbit__node.is-expanded .visa-orbit__icon { --orbit-scale: 1.9; }
   .visa-orbit__hub { width: clamp(108px, 36%, 128px); }
   .visa-orbit__hub-label { max-width: 140px; font-size: clamp(11px, 3vw, 13px); }
-  .visa-orbit__heading-label { max-width: 80px; font-size: 9px; }
-  .visa-orbit__detail--inline { left: calc(100% + 28px); }
+  .visa-orbit__heading-label { max-width: 92px; font-size: 9px; }
 }
 @media (max-width: 519px) {
   .visa-orbit__orbit-wrap { width: min(320px, 90vw); }
@@ -829,23 +813,19 @@ body.nav-open { overflow: hidden; }
   .visa-orbit__icon .visa-orbit__glyph,
   .visa-orbit__icon i,
   .visa-orbit__icon svg { width: 20px; height: 20px; }
-  .visa-orbit__detail--dock.is-open { margin-top: 46px; }
+  .visa-orbit__detail--dock.is-open { margin-top: 56px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .visa-orbit__icon,
   .visa-orbit__detail--inline,
   .visa-orbit__detail--dock,
   .visa-orbit__hub { transition: none !important; }
-  .visa-orbit__node.is-expanded .visa-orbit__icon { transform: scale(1.38); }
+  .visa-orbit__node.is-expanded .visa-orbit__icon { --orbit-scale: 2.15; }
   .visa-orbit__ripple { animation: none !important; opacity: 0 !important; }
   .visa-orbit__highlight { animation: none !important; }
 }
 [data-theme="dark"] .visa-orbit__ripple {
-  border-color: rgba(113, 191, 241, .22);
-  background: radial-gradient(circle, rgba(113, 191, 241, .08) 0%, rgba(113, 191, 241, .03) 45%, transparent 74%);
-  box-shadow:
-    0 0 30px rgba(113, 191, 241, .12),
-    0 0 1px rgba(255,255,255,.12);
+  --ripple: 0, 207, 255;
 }
 [data-theme="dark"] .visa-orbit__highlight {
   --orbit-highlight: conic-gradient(
@@ -900,15 +880,9 @@ body.nav-open { overflow: hidden; }
 [data-theme="dark"] .visa-orbit__heading-label {
   color: color-mix(in srgb, var(--orbit-color, #00CFFF) 88%, #fff);
 }
-[data-theme="dark"] .visa-orbit__detail-sub {
-  color: color-mix(in srgb, var(--orbit-color, #00CFFF) 80%, #fff);
-}
 [data-theme="dark"] .visa-orbit__solution {
-  background: color-mix(in srgb, var(--orbit-color, #00CFFF) 16%, #0a0c12);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-color, #00CFFF) 36%, rgba(255,255,255,.08));
-}
-[data-theme="dark"] .visa-orbit__solution-label {
-  color: color-mix(in srgb, var(--orbit-color, #00CFFF) 80%, #fff);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line-2);
 }
 [data-theme="dark"] .visa-orbit__icon {
   color: var(--orbit-color, #00CFFF);
@@ -932,7 +906,13 @@ body.nav-open { overflow: hidden; }
   stroke-width: 2.25;
   filter: none;
 }
+[data-theme="dark"] .visa-orbit__node.is-expanded .visa-orbit__icon .visa-orbit__glyph,
+[data-theme="dark"] .visa-orbit__node.is-expanded .visa-orbit__icon i,
+[data-theme="dark"] .visa-orbit__node.is-expanded .visa-orbit__icon svg {
+  stroke-width: 2.25;
+}
 [data-theme="dark"] .visa-orbit__node.is-expanded .visa-orbit__icon {
+  border-width: calc(1.5px / var(--orbit-scale));
   border-color: color-mix(in srgb, var(--orbit-color, #00CFFF) 78%, rgba(255,255,255,.2));
   background: radial-gradient(
     circle at 38% 30%,
@@ -941,10 +921,10 @@ body.nav-open { overflow: hidden; }
     #090b10 76%
   );
   box-shadow:
-    0 0 0 3px #050508e6,
-    0 0 0 5px color-mix(in srgb, var(--orbit-color, #00CFFF) 38%, transparent),
+    0 0 0 calc(3px / var(--orbit-scale)) #050508e6,
+    0 0 0 calc(4.4px / var(--orbit-scale)) color-mix(in srgb, var(--orbit-color, #00CFFF) 55%, transparent),
     0 14px 40px color-mix(in srgb, var(--orbit-color, #00CFFF) 36%, transparent),
-    inset 0 1px color-mix(in srgb, var(--orbit-color, #00CFFF) 32%, transparent);
+    inset 0 calc(1px / var(--orbit-scale)) color-mix(in srgb, var(--orbit-color, #00CFFF) 32%, transparent);
 }
 .page-hero { padding-top: clamp(var(--space-16), 8vw, var(--space-32)); padding-bottom: clamp(var(--space-12), 6vw, var(--space-20)); }
 .page-hero .h1 { max-width: 18ch; margin-top: var(--space-5); }
