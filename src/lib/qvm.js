@@ -1,5 +1,6 @@
 /* Quantum Visa Manager — shared site script */
 import { setupBooking } from './bookDemo.js';
+import { mountHubGlobe } from './hubGlobe.js';
 
 (() => {
   const $ = (s, r = document) => r.querySelector(s);
@@ -13,7 +14,7 @@ import { setupBooking } from './bookDemo.js';
   window.QVM = { I, icons, T };
 
   /* ------------------------------------------------------------------ Logo */
-  const LOGO = `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="15" cy="15" r="11" stroke="currentColor" stroke-width="2.4"/><path d="M10.4 15.2l3.3 3.3 8.6-8.6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M22.6 22.6l5 5" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/></svg>`;
+  const LOGO = `<img src="/assets/logo.png" alt="" width="32" height="32" decoding="async">`;
 
   /* ------------------------------------------------------------ Navigation */
   const NAV = [
@@ -31,6 +32,7 @@ import { setupBooking } from './bookDemo.js';
       ['Skills Assessment', 'solutions.html#skills', 'ANZSCO and assessment steps', 'soon'],
     ] },
     { t: 'How It Works', h: 'how-it-works.html', key: 'how' },
+    { t: 'Data Security', h: 'ai-control-security.html', key: 'security' },
     { t: 'Pricing', h: 'pricing.html', key: 'pricing' },
     { t: 'Resources', h: 'resources.html', key: 'resources' },
   ];
@@ -194,6 +196,12 @@ import { setupBooking } from './bookDemo.js';
       { cc: 'The enquiry is qualified, routed and booked into a consultant\u2019s calendar.', html: S.task('New qualified lead', [['Source', 'Phone · AU local number'], ['Language', 'Mandarin'], ['Consultation', 'Thu 16/10 · 10:30 am']], 'L. Chen (RMA)', 'Logged 9:44 pm') },
       { cc: 'Your consultant picks it up in the morning with the full summary.', signoff: true, html: S.review('Review lead before consultation', 'Summary, transcript and booking attached', 'Open lead') },
     ] },
+    exposure: { title: 'Client data controls', scenes: [
+      { cc: 'Each practice is hosted in its own tenant. Australia is the default region.', html: S.list('Hosting', 'Set per practice', [['Australia', 'Default data residency', true], ['Practice separation', 'One tenant, not shared with other firms', true]]) },
+      { cc: 'Access follows the role. A sponsor contact only sees their own records.', html: S.list('Access', 'Role-based permissions', [['Practice owner', 'Settings, AI controls, exports', true], ['Registered migration agent', 'Approvals and deadlines', true], ['Sponsor HR contact', 'Own sponsor records only', true]]) },
+      { cc: 'AI reads only authorised email and documents. Every action is written to the audit log.', html: S.checks('Processing and record', [['Authorised email and documents only', 'Classify, check and draft'], ['Audit log', 'Who did what, on which matter'], ['Monthly backup', 'To a drive the practice selects']]) },
+      { cc: 'You keep the region, the roles, the export and the backup.', signoff: true, html: S.review('Confirm data controls', 'Region, access, audit log and backup', 'Review controls') },
+    ] },
     sponsor: { title: 'Sponsor document reuse', scenes: [
       { cc: 'A new nomination is started for an existing corporate sponsor.', html: S.list('New nomination', 'Sponsor: H•••• Engineering Pty Ltd', [['Standard business sponsorship', 'Approved · on file', true], ['Nominee', 'K. S••••• · Civil engineer', true]]) },
       { cc: 'Quantum links the nomination to the sponsor\u2019s reusable document pack.', html: S.list('Sponsor document pack', '34 records · 31 current', [['ASIC company extract', 'Current', true], ['Financial statements FY26', 'Current', true], ['Organisation chart', 'Expires 30/11/2026', 'warn', 'Expiring', 'tag--warn']]) },
@@ -212,7 +220,7 @@ import { setupBooking } from './bookDemo.js';
       'The Subclass 190 checklist updates. The missing item gets a reminder.',
       'Two documents wait for your review. Nothing is accepted without you.',
     ];
-    el.innerHTML = `<div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-title">${LOGO.replace('<svg', '<svg width="13" height="13"')}Matter VM-2041 · Skilled Nominated (Subclass 190)</div><span class="tag" style="font-size:10.5px">Live workflow</span></div>
+    el.innerHTML = `<div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-title"><img src="/assets/logo.png" alt="" width="13" height="13" decoding="async">Matter VM-2041 · Skilled Nominated (Subclass 190)</div><span class="tag" style="font-size:10.5px">Live workflow</span></div>
       <div class="flow">
         <div class="flow-col"><div class="ui-label"><span class="step-n">1</span>Incoming</div>
           <div class="mail" data-f="mail"><div class="mail-head"><span class="avatar">AN</span><div><b>A. N•••••</b><small>Client · 9:02 am</small></div></div>
@@ -255,40 +263,44 @@ import { setupBooking } from './bookDemo.js';
 
   /* ---------------------------------------------------------------- Problems */
   const PROBLEMS = [
-    { t: 'Chasing missing documents', clip: 'docs',
-      manual: ['Compare the checklist with what has arrived', 'Write a reminder for each client', 'Watch the inbox for replies', 'Chase again when nothing arrives'],
-      q: 'Identifies outstanding items for each visa stream, sends requests in your tone and schedules follow-up reminders until the document arrives.',
-      you: 'You approve request templates and reminder timing once. You can pause chasing on any matter.' },
-    { t: 'Checking expiry and eligibility', clip: 'expiry',
-      manual: ['Open each file', 'Check issue and expiry dates', 'Confirm it is the right document', 'Note any issues for the client'],
-      q: 'Checks document type, details, expiry and validity against the requirement set in your visa library. Unsuitable documents become exceptions, not files.',
-      you: 'Every document waits for your acceptance. You decide on each exception.' },
-    { t: 'Re-entering data into forms', clip: 'forms',
-      manual: ['Find the verified document', 'Copy each detail into a PDF form', 'Re-type the same data online', 'Re-check for typing errors'],
-      q: 'Maps verified details to the applicable forms and prefills matching government web-form fields through a browser extension.',
-      you: 'You check and verify each entry. Submission and lodgement are always your actions.' },
-    { t: 'Managing Department and client correspondence', clip: 'corr',
-      manual: ['Read every email on every matter', 'Work out what is being asked', 'Create a task and choose an owner', 'Draft the reply from scratch'],
-      q: 'Reads authorised inbound email, understands the request in the chain, creates the task, assigns the responsible person and drafts a response.',
-      you: 'You verify legal deadlines and approve what is sent. Proposed dates never govern on their own.' },
-    { t: 'Keeping up with changing requirements', clip: 'library',
-      manual: ['Watch government pages', 'Work out which checklists are affected', 'Update templates by hand', 'Tell the team what changed'],
-      q: 'Monitors government publications, identifies the effect on checklists, templates, fees and timelines, and prepares a change proposal.',
-      you: 'Nothing changes until an authorised consultant approves the update.' },
-    { t: 'Missing enquiries after hours', clip: 'reception',
-      manual: ['Voicemail fills overnight', 'Call back across time zones', 'Prospects choose whoever answers first', 'Details are lost between notes'],
-      q: 'A multilingual AI receptionist on local numbers answers general service questions, qualifies the enquiry and books a consultation.',
-      you: 'The receptionist never gives immigration advice. Your consultant takes over from the first consultation.' },
+    { t: 'Missed Critical Deadlines', clip: 'corr',
+      manual: ['Department mail sits unread', 'No owner is assigned', 'The response date is missed', 'The client finds out too late'],
+      q: 'Correspondence-to-task automation, assigned owners, reminders and deadline tracking, with consultant verification.',
+      you: 'You verify the legal deadline and approve what is sent. A proposed date never governs on its own.' },
+    { t: 'Incorrect Application Details', clip: 'forms',
+      manual: ['Details are copied by hand', 'Names and dates disagree across documents', 'Errors are found late', 'The application is reworked'],
+      q: 'AI document checks, discrepancy flags, source-linked form prefill and agent/client review before lodgement.',
+      you: 'You check every flagged discrepancy and every prefilled field. Lodgement stays your action.' },
+    { t: 'Client Data Exposure', clip: 'exposure',
+      manual: ['Files sit in shared inboxes', 'Access is broader than the role', 'There is no record of who opened what', 'Backups depend on someone remembering'],
+      q: 'Australian hosting and in-platform AI processing, practice separation, access controls, encryption, audit logs and backups.',
+      you: 'You choose the hosting region, the roles and the backup destination.' },
+    { t: 'Outdated Visa Information', clip: 'library',
+      manual: ['Government pages change unnoticed', 'Old forms stay in use', 'Checklists lag the requirement', 'Corrections happen late in preparation'],
+      q: 'Gov Sync highlights changes for approval; Visa Library maintains approved forms, checklists and version history.',
+      you: 'Nothing in the library changes until an authorised consultant approves it.' },
+    { t: 'Scattered Client Communication', clip: 'corr',
+      manual: ['Advice lives in separate inboxes', 'Instructions are missed', 'Clients get inconsistent updates', 'The matter file never sees the thread'],
+      q: 'Unified Inbox, matter-linked conversations, reusable email templates and grouped notifications.',
+      you: 'You approve templates and what is sent. The thread stays on the matter.' },
+    { t: 'Constant Document Chasing', clip: 'docs',
+      manual: ['Compare the checklist with what arrived', 'Write each reminder by hand', 'Watch the inbox for replies', 'Chase again when nothing comes back'],
+      q: 'Document requests, approved reminders, email attachment capture, Vault versioning and checklist updates.',
+      you: 'You approve request templates and reminder timing. You can pause chasing on any matter.' },
+    { t: 'Disconnected Sponsor Records', clip: 'sponsor',
+      manual: ['Sponsor evidence is filed per nominee', 'The same document is requested again', 'Expiries are spotted late', 'Linked cases wait on a missing record'],
+      q: 'Sponsor profiles, linked nominee matters, document checklists, expiry tracking and sponsor action monitoring.',
+      you: 'You confirm which sponsor documents are reused for each nomination.' },
   ];
 
   function problems(el) {
-    el.innerHTML = `<div class="p-list" role="tablist" aria-orientation="vertical">${PROBLEMS.map((p, i) => `<div class="p-item"><button class="p-btn" role="tab" id="pt${i}" aria-controls="pdetail" aria-selected="false"><span class="n">0${i + 1}</span><span class="t">${p.t}</span><span class="chev"><svg viewBox="0 0 6 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l4 4-4 4"/></svg></span></button><div class="p-inline"></div></div>`).join('')}</div><div class="p-stage"></div>`;
+    el.innerHTML = `<div class="p-list" role="tablist" aria-orientation="vertical">${PROBLEMS.map((p, i) => `<div class="p-item" id="problem-${i}"><button class="p-btn" role="tab" id="pt${i}" aria-controls="pdetail" aria-selected="false"><span class="n">0${i + 1}</span><span class="t">${p.t}</span><span class="chev"><svg viewBox="0 0 6 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l4 4-4 4"/></svg></span></button><div class="p-inline"></div></div>`).join('')}</div><div class="p-stage"></div>`;
     const detail = document.createElement('div'); detail.id = 'pdetail'; detail.setAttribute('role', 'tabpanel');
     const stage = $('.p-stage', el); let clip, cur = -1;
     const mq = matchMedia('(min-width: 980px)');
     const place = () => { (mq.matches ? stage : $$('.p-inline', el)[cur]).appendChild(detail); };
-    const select = (i, focus) => {
-      if (i === cur && !mq.matches) { $$('.p-item', el)[i].classList.toggle('is-active'); return; }
+    const select = (i, focus, toggle) => {
+      if (toggle && i === cur && !mq.matches) { $$('.p-item', el)[i].classList.toggle('is-active'); return; }
       cur = i; const p = PROBLEMS[i];
       $$('.p-item', el).forEach((it, k) => { it.classList.toggle('is-active', k === i); it.querySelector('.p-btn').setAttribute('aria-selected', k === i); });
       detail.setAttribute('aria-labelledby', 'pt' + i);
@@ -301,9 +313,25 @@ import { setupBooking } from './bookDemo.js';
       place();
       if (focus) $$('.p-btn', el)[i].focus();
     };
-    $$('.p-btn', el).forEach((b, i) => { b.addEventListener('click', () => select(i)); b.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); select((i + (e.key === 'ArrowDown' ? 1 : 5)) % 6, true); } }); });
+    el._selectProblem = select;
+    const scrollToPoint = (idx) => {
+      const point = $(`#problem-${idx}`, el);
+      const solution = $('.p-col--quantum', el);
+      const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 60;
+      const target = window.innerWidth < 980 ? (solution || point) : point;
+      if (!target) return;
+      const top = target.getBoundingClientRect().top + window.scrollY - headerH - 12;
+      window.scrollTo({ top: Math.max(0, top), behavior: reduce ? 'auto' : 'smooth' });
+    };
+    window.QVM.selectProblem = (i) => {
+      const idx = Math.max(0, Math.min(PROBLEMS.length - 1, +i || 0));
+      select(idx, false, false);
+      requestAnimationFrame(() => scrollToPoint(idx));
+    };
+    $$('.p-btn', el).forEach((b, i) => { b.addEventListener('click', () => select(i, false, true)); b.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); select((i + (e.key === 'ArrowDown' ? 1 : PROBLEMS.length - 1)) % PROBLEMS.length, true); } }); });
     mq.addEventListener('change', place);
-    select(0);
+    const hashMatch = location.hash.match(/^#problem-(\d+)$/);
+    select(hashMatch ? +hashMatch[1] : 0);
   }
 
   /* -------------------------------------------------------------- Difference */
@@ -591,6 +619,239 @@ import { setupBooking } from './bookDemo.js';
     });
   }
 
+  /* ------------------------------------------------------- Hero inline video */
+  function heroVideo(el) {
+    if (el.dataset.bound === '1') return;
+    el.dataset.bound = '1';
+    const id = el.dataset.youtubeId;
+    const overlay = $('.hero-video__overlay', el);
+    const mount = $('.hero-video__iframe', el);
+    if (!id || !overlay || !mount || !/^[\w-]{6,}$/.test(id)) return;
+    const play = () => {
+      if (el.classList.contains('is-playing')) return;
+      mount.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&color=white&playsinline=1" title="Overview walkthrough" allow="autoplay; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe>`;
+      el.classList.add('is-playing');
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.tabIndex = -1;
+    };
+    overlay.addEventListener('click', play);
+  }
+
+  /* ----------------------------------------------- Visa orbit (from Quantum Agent) */
+  const orbitIcon = (name) => `<i data-lucide="${name}" class="visa-orbit__glyph" aria-hidden="true"></i>`;
+  const ORBIT_ITEMS = [
+    { id: 'missed-deadlines', no: '01', title: 'Missed Critical Deadlines', label: 'Missed Critical Deadlines', points: ['Lost opportunities to respond', 'Client harm and complaints'], solution: 'Correspondence-to-task automation, assigned owners, reminders and deadline tracking, with consultant verification.', problem: 0, color: '#C46F55', colorDark: '#FF8A55', icon: orbitIcon('clock') },
+    { id: 'incorrect-details', no: '02', title: 'Incorrect Application Details', label: 'Incorrect Application Details', points: ['Rework and processing delays', 'Weakened application credibility'], solution: 'AI document checks, discrepancy flags, source-linked form prefill and agent/client review before lodgement.', problem: 1, color: '#D4896A', colorDark: '#FF6EAE', icon: orbitIcon('file-warning') },
+    { id: 'data-exposure', no: '03', title: 'Client Data Exposure', label: 'Client Data Exposure', points: ['Sensitive information compromised', 'Privacy complaints and reputational damage'], solution: 'Australian hosting and in-platform AI processing, practice separation, access controls, encryption, audit logs and backups.', problem: 2, color: '#6F5CB8', colorDark: '#B07CFF', icon: orbitIcon('shield-alert') },
+    { id: 'outdated-info', no: '04', title: 'Outdated Visa Information', label: 'Outdated Visa Information', points: ['Incorrect requirements applied', 'Late corrections delay preparation'], solution: 'Gov Sync highlights changes for approval; Visa Library maintains approved forms, checklists and version history.', problem: 3, color: '#C4A24A', colorDark: '#FFC83D', icon: orbitIcon('book-open') },
+    { id: 'scattered-comms', no: '05', title: 'Scattered Client Communication', label: 'Scattered Client Communication', points: ['Important instructions overlooked', 'Inconsistent updates frustrate clients'], solution: 'Unified Inbox, matter-linked conversations, reusable email templates and grouped notifications.', problem: 4, color: '#4A9470', colorDark: '#2EE6FF', icon: orbitIcon('inbox') },
+    { id: 'document-chasing', no: '06', title: 'Constant Document Chasing', label: 'Constant Document Chasing', points: ['Case preparation stalls', 'Staff hours disappear into follow-ups'], solution: 'Document requests, approved reminders, email attachment capture, Vault versioning and checklist updates.', problem: 5, color: '#5FA882', colorDark: '#3EE8C4', icon: orbitIcon('files') },
+    { id: 'sponsor-records', no: '07', title: 'Disconnected Sponsor Records', label: 'Disconnected Sponsor Records', points: ['Missing evidence delays linked cases', 'Expiries and outstanding actions overlooked'], solution: 'Sponsor profiles, linked nominee matters, document checklists, expiry tracking and sponsor action monitoring.', problem: 6, color: '#8B74D4', colorDark: '#8090FF', icon: orbitIcon('building-2') },
+  ];
+
+  function visaOrbit(root) {
+    if (root.dataset.bound === '1') return;
+    root.dataset.bound = '1';
+    const stage = $('.visa-orbit__stage', root);
+    const orbit = $('.visa-orbit__orbit', root);
+    const dock = $('.visa-orbit__detail--dock', root);
+    if (!stage || !orbit) return;
+    const globe = $('.visa-orbit__hub-globe', root);
+    if (globe) mountHubGlobe(globe, reduce);
+
+    const n = ORBIT_ITEMS.length;
+    const rotateMs = 900;
+    const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2);
+    const norm = (deg) => { const x = deg % 360; return x < 0 ? x + 360 : x; };
+    const delta = (from, to) => { let d = norm(to) - norm(from); if (d > 180) d -= 360; if (d < -180) d += 360; return d; };
+    const targetFor = (i, top) => norm(top - (i / n) * 360);
+
+    let idx = -1;
+    let expanded = false;
+    let selecting = false;
+    let visible = true;
+    let mobile = false;
+    let topAngle = 0;
+    let rotation = 0;
+    let raf = 0;
+    let gen = 0;
+
+    const setRotation = (deg) => {
+      rotation = norm(deg);
+      orbit.style.setProperty('--current-rotation', `${rotation}deg`);
+    };
+    const setRadius = (px) => {
+      orbit.style.setProperty('--orbit-radius', `${px}px`);
+    };
+    const detailHtml = (item) => `
+      <div class="visa-orbit__panel">
+        <p class="visa-orbit__kicker"><span>${item.no}</span></p>
+        <h3 class="visa-orbit__name">${item.title}</h3>
+        <ul class="visa-orbit__problems">${item.points.map((point) => `<li>${point}</li>`).join('')}</ul>
+        <div class="visa-orbit__solution">
+          <span class="visa-orbit__solution-label">QVM solution</span>
+          <p>${item.solution}</p>
+        </div>
+        <a class="btn btn--primary btn--sm" href="#problems" data-orbit-solution="${item.problem}">See the solution</a>
+      </div>`;
+
+    orbit.insertAdjacentHTML('beforeend', ORBIT_ITEMS.map((item, i) => `
+      <div class="visa-orbit__node" data-orbit-i="${i}" style="--item-angle:${(i / n) * 360}deg;--orbit-color:${item.color}">
+        <button type="button" class="visa-orbit__node-btn" aria-pressed="false" aria-label="${item.no} ${item.title}">
+          <span class="visa-orbit__icon">${item.icon}</span>
+          <span class="visa-orbit__heading-label">${item.label}</span>
+        </button>
+        <div class="visa-orbit__detail visa-orbit__detail--inline" aria-hidden="true">${detailHtml(item)}</div>
+      </div>`).join(''));
+    root.addEventListener('click', (e) => {
+      const cta = e.target.closest('[data-orbit-solution]');
+      if (!cta) return;
+      e.preventDefault();
+      const problem = cta.getAttribute('data-orbit-solution');
+      if (window.QVM && typeof window.QVM.selectProblem === 'function') {
+        window.QVM.selectProblem(problem);
+      } else {
+        location.hash = `#problem-${problem}`;
+      }
+    });
+
+    const nodes = $$('.visa-orbit__node', orbit);
+    const orbitColor = (item) => (document.documentElement.getAttribute('data-theme') === 'dark' ? (item.colorDark || item.color) : item.color);
+    const syncColors = () => {
+      nodes.forEach((node, i) => {
+        const item = ORBIT_ITEMS[i];
+        const c = orbitColor(item);
+        node.style.setProperty('--orbit-color', c);
+      });
+      if (dock && idx >= 0) dock.style.setProperty('--orbit-color', orbitColor(ORBIT_ITEMS[idx]));
+    };
+    syncColors();
+    new MutationObserver(syncColors).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    const stop = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    };
+    const paint = (active, open) => {
+      idx = active;
+      expanded = open;
+      stage.classList.toggle('is-expanded', open);
+      nodes.forEach((node, i) => {
+        const on = i === active && open;
+        node.classList.toggle('is-expanded', on);
+        const btn = $('.visa-orbit__node-btn', node);
+        const inline = $('.visa-orbit__detail--inline', node);
+        btn && btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        inline && inline.setAttribute('aria-hidden', on ? 'false' : 'true');
+      });
+      if (dock) {
+        if (active < 0 || !open || !mobile) {
+          dock.innerHTML = '';
+          dock.classList.remove('is-open');
+          dock.setAttribute('aria-hidden', 'true');
+        } else {
+          const item = ORBIT_ITEMS[active];
+          dock.innerHTML = detailHtml(item);
+          dock.style.setProperty('--orbit-color', orbitColor(item));
+          dock.classList.add('is-open');
+          dock.setAttribute('aria-hidden', 'false');
+        }
+      }
+    };
+    const select = (at) => {
+      selecting = true;
+      if (at === idx && expanded) {
+        stop();
+        gen += 1;
+        paint(at, false);
+        selecting = false;
+        return;
+      }
+      stop();
+      const token = ++gen;
+      if (expanded && idx !== at) paint(idx, false);
+      const from = rotation;
+      const to = targetFor(at, topAngle);
+      const d = delta(from, to);
+      if (reduce || Math.abs(d) < 0.4) {
+        setRotation(to);
+        paint(at, true);
+        selecting = false;
+        return;
+      }
+      idx = at;
+      const t0 = performance.now();
+      const tick = (now) => {
+        if (token !== gen) return;
+        const p = Math.min(1, (now - t0) / rotateMs);
+        setRotation(from + d * ease(p));
+        if (p < 1) { raf = requestAnimationFrame(tick); return; }
+        setRotation(to);
+        paint(at, true);
+        selecting = false;
+      };
+      raf = requestAnimationFrame(tick);
+    };
+    const layout = () => {
+      const w = window.innerWidth;
+      mobile = w < 900;
+      topAngle = mobile ? 90 : 0;
+      if (w < 380) setRadius(104);
+      else if (w < 520) setRadius(118);
+      else if (w < 768) setRadius(146);
+      else if (w < 900) setRadius(170);
+      else if (w < 1100) setRadius(188);
+      else setRadius(210);
+    };
+
+    nodes.forEach((node, i) => {
+      $('.visa-orbit__node-btn', node)?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        select(i);
+      });
+    });
+
+    const closeExpanded = () => {
+      if (!expanded || idx < 0) return;
+      stop();
+      gen += 1;
+      selecting = false;
+      paint(idx, false);
+    };
+    const closeOutside = (e) => {
+      if (!expanded || idx < 0) return;
+      const active = nodes[idx];
+      if (active && active.contains(e.target)) return;
+      if (dock && dock.contains(e.target)) return;
+      if (e.target.closest?.('.visa-orbit__node-btn')) return;
+      closeExpanded();
+    };
+    document.addEventListener('pointerdown', closeOutside, true);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeExpanded();
+    });
+
+    layout();
+    setRotation(0);
+    paint(-1, false);
+    const idle = () => {
+      if (!orbit.isConnected) return;
+      if (!reduce && visible && !expanded && !selecting) setRotation(rotation + 0.1);
+      requestAnimationFrame(idle);
+    };
+    if (!reduce) requestAnimationFrame(idle);
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        visible = entries.some((entry) => entry.isIntersecting);
+      }, { threshold: 0.1, rootMargin: '50px' });
+      io.observe(stage);
+    }
+    window.addEventListener('resize', () => {
+      layout();
+      if (idx >= 0 && expanded) setRotation(targetFor(idx, topAngle));
+      paint(idx, expanded);
+    });
+  }
+
   /* ------------------------------------------------------- Video section tabs */
   function videoTabs(root) {
     const tabs = $$('[data-video-tab]', root);
@@ -644,6 +905,8 @@ import { setupBooking } from './bookDemo.js';
     root.dataset.qvmBooted = '1';
     const scope = (sel) => $$(sel, root);
     scope('[data-hero-flow]').forEach(heroFlow);
+    scope('[data-hero-video]').forEach(heroVideo);
+    scope('[data-visa-orbit]').forEach(visaOrbit);
     scope('[data-problems]').forEach(problems);
     scope('[data-diff]').forEach(difference);
     scope('[data-journey]').forEach(journey);

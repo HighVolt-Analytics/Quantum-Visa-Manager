@@ -7,7 +7,7 @@ const PAGE_KEYS = {
   '/': 'home',
   '/platform': 'platform',
   '/visa-operations': 'platform',
-  '/ai-control-security': 'platform',
+  '/ai-control-security': 'security',
   '/solutions': 'solutions',
   '/corporate-sponsorship': 'solutions',
   '/practice-growth': 'solutions',

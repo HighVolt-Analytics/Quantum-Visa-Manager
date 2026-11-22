@@ -11,7 +11,7 @@
   window.QVM = { I, icons, T };
 
   /* ------------------------------------------------------------------ Logo */
-  const LOGO = `<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="15" cy="15" r="11" stroke="currentColor" stroke-width="2.4"/><path d="M10.4 15.2l3.3 3.3 8.6-8.6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M22.6 22.6l5 5" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/></svg>`;
+  const LOGO = `<img src="/assets/logo.png" alt="" width="32" height="32" decoding="async">`;
 
   /* ------------------------------------------------------------ Navigation */
   const NAV = [
@@ -217,7 +217,7 @@
       'The Subclass 190 checklist updates. The missing item gets a reminder.',
       'Two documents wait for your review. Nothing is accepted without you.',
     ];
-    el.innerHTML = `<div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-title">${LOGO.replace('<svg', '<svg width="13" height="13"')}Matter VM-2041 · Skilled Nominated (Subclass 190)</div><span class="tag" style="font-size:10.5px">Live workflow</span></div>
+    el.innerHTML = `<div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-title"><img src="/assets/logo.png" alt="" width="13" height="13" decoding="async">Matter VM-2041 · Skilled Nominated (Subclass 190)</div><span class="tag" style="font-size:10.5px">Live workflow</span></div>
       <div class="flow">
         <div class="flow-col"><div class="ui-label"><span class="step-n">1</span>Incoming</div>
           <div class="mail" data-f="mail"><div class="mail-head"><span class="avatar">AN</span><div><b>A. N•••••</b><small>Client · 9:02 am</small></div></div>
