@@ -52,7 +52,6 @@ import { mountHubGlobe } from './hubGlobe.js';
       <a class="brand" href="index.html" aria-label="Quantum Visa Manager home">${LOGO}<span>Quantum <span class="brand-sub">Visa Manager</span></span></a>
       <nav class="nav-links" aria-label="Primary">${links}</nav>
       <div class="nav-actions">
-        <button class="icon-btn" data-theme-toggle aria-label="Switch to dark mode"><i data-lucide="moon"></i></button>
         <a class="btn btn--primary btn--sm" href="book-demo.html">Book a Demo</a>
         <button class="icon-btn menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mnav"><i data-lucide="menu"></i></button>
       </div>
@@ -87,12 +86,7 @@ import { mountHubGlobe } from './hubGlobe.js';
 
   /* --------------------------------------------------------------- Theme */
   function theme() {
-    const root = document.documentElement;
-    let t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    const btn = $('[data-theme-toggle]');
-    const set = v => { t = v; root.setAttribute('data-theme', v); btn.innerHTML = `<i data-lucide="${v === 'dark' ? 'sun' : 'moon'}"></i>`; btn.setAttribute('aria-label', `Switch to ${v === 'dark' ? 'light' : 'dark'} mode`); icons(); };
-    set(t);
-    btn.addEventListener('click', () => set(t === 'dark' ? 'light' : 'dark'));
+    document.documentElement.setAttribute('data-theme', 'dark');
   }
 
   function chrome() {
@@ -316,9 +310,9 @@ import { mountHubGlobe } from './hubGlobe.js';
     el._selectProblem = select;
     const scrollToPoint = (idx) => {
       const point = $(`#problem-${idx}`, el);
-      const solution = $('.p-col--quantum', el);
+      const visual = point && $('.cdiv', point);
       const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 60;
-      const target = window.innerWidth < 980 ? (solution || point) : point;
+      const target = window.innerWidth < 980 ? (visual || point) : point;
       if (!target) return;
       const top = target.getBoundingClientRect().top + window.scrollY - headerH - 12;
       window.scrollTo({ top: Math.max(0, top), behavior: reduce ? 'auto' : 'smooth' });
@@ -682,6 +676,19 @@ import { mountHubGlobe } from './hubGlobe.js';
     };
     const setRadius = (px) => {
       orbit.style.setProperty('--orbit-radius', `${px}px`);
+      stage.style.setProperty('--orbit-radius', `${px}px`);
+    };
+    const revealDock = () => {
+      if (!mobile || !dock || !dock.classList.contains('is-open')) return;
+      requestAnimationFrame(() => {
+        const box = dock.getBoundingClientRect();
+        const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 60;
+        const margin = 16;
+        let delta = 0;
+        if (box.bottom > window.innerHeight - margin) delta = box.bottom - (window.innerHeight - margin);
+        if (box.top - delta < headerH + margin) delta = box.top - (headerH + margin);
+        if (Math.abs(delta) > 4) window.scrollBy({ top: delta, behavior: reduce ? 'auto' : 'smooth' });
+      });
     };
     const detailHtml = (item) => `
       <div class="visa-orbit__panel">
@@ -776,6 +783,7 @@ import { mountHubGlobe } from './hubGlobe.js';
         setRotation(to);
         paint(at, true);
         selecting = false;
+        revealDock();
         return;
       }
       idx = at;
@@ -788,19 +796,22 @@ import { mountHubGlobe } from './hubGlobe.js';
         setRotation(to);
         paint(at, true);
         selecting = false;
+        revealDock();
       };
       raf = requestAnimationFrame(tick);
     };
     const layout = () => {
       const w = window.innerWidth;
+      const box = stage.clientWidth || w;
       mobile = w < 900;
       topAngle = mobile ? 90 : 0;
-      if (w < 380) setRadius(104);
-      else if (w < 520) setRadius(118);
-      else if (w < 768) setRadius(146);
-      else if (w < 900) setRadius(170);
-      else if (w < 1100) setRadius(188);
-      else setRadius(210);
+      const nodeHalf = mobile ? (w < 520 ? 18 : 20) : 24;
+      const labelOut = mobile ? (w < 520 ? 36 : 42) : 10;
+      const fit = Math.floor(box / 2 - nodeHalf - labelOut);
+      let radius = 210;
+      if (w < 900) radius = w < 520 ? 108 : 150;
+      else if (w < 1100) radius = 188;
+      setRadius(Math.max(78, Math.min(radius, fit)));
     };
 
     nodes.forEach((node, i) => {

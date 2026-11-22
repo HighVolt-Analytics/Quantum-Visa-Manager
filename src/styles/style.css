@@ -237,7 +237,7 @@ body.nav-open { overflow: hidden; }
 
 /* ---------- Hero ---------- */
 .hero { padding-top: clamp(var(--space-5), 2.5vw, 2.25rem); padding-bottom: clamp(var(--space-12), 5vw, var(--space-16)); text-align: center; overflow: visible; }
-.hero .display { max-width: 15ch; margin-inline: auto; margin-top: var(--space-4); font-size: clamp(2.2rem, 0.9rem + 4.2vw, 4.75rem); }
+.hero .display { max-width: 20ch; margin-inline: auto; margin-top: var(--space-4); font-size: clamp(2.2rem, 0.9rem + 4.2vw, 4.75rem); }
 .hero .lead { max-width: none; width: min(100%, 1120px); margin: var(--space-4) auto 0; display: flex; flex-direction: column; align-items: center; }
 .hero .lead span { display: block; line-height: 1.4; white-space: nowrap; font-size: min(1.125rem, calc((100vw - 3rem) / 58)); letter-spacing: -0.018em; }
 .hero .btn-row { justify-content: center; margin-top: var(--space-6); }
@@ -360,7 +360,7 @@ body.nav-open { overflow: hidden; }
 .visa-orbit {
   position: relative;
   z-index: 1;
-  width: min(1120px, 94vw);
+  width: min(1120px, 100%);
   margin: 0 auto;
   color: var(--ink);
   overflow: visible;
@@ -792,30 +792,43 @@ body.nav-open { overflow: hidden; }
   .visa-orbit__detail--inline { left: calc(100% + 46px); }
 }
 @media (max-width: 899px) {
-  .visa-orbit__orbit-wrap { width: min(390px, 84vw); }
+  .visa-orbit__stage { min-height: 0; }
+  .visa-orbit__orbit-wrap {
+    width: min(100%, calc(var(--orbit-radius, 108px) * 2 + 148px));
+    max-width: 100%;
+  }
   .visa-orbit__stage.is-expanded .visa-orbit__orbit-wrap { transform: none; }
   .visa-orbit__detail--inline { display: none !important; }
-  .visa-orbit__detail--dock.is-open { display: block; margin-top: 28px; }
-  .visa-orbit__node { --node-size: 42px; }
-  .visa-orbit__node.is-expanded .visa-orbit__icon { --orbit-scale: 1.9; }
-  .visa-orbit__hub { width: clamp(108px, 36%, 128px); }
-  .visa-orbit__hub-label { max-width: 140px; font-size: clamp(11px, 3vw, 13px); }
-  .visa-orbit__heading-label { max-width: 92px; font-size: 9px; }
+  .visa-orbit__detail--dock,
+  .visa-orbit__detail--dock.is-open,
+  .visa-orbit__panel {
+    width: 100%;
+    max-width: 100%;
+  }
+  .visa-orbit__detail--dock.is-open { display: block; margin-top: 20px; }
+  .visa-orbit__name { font-size: 24px; }
+  .visa-orbit__node { --node-size: 40px; }
+  .visa-orbit__node.is-expanded .visa-orbit__icon { --orbit-scale: 1.55; }
+  .visa-orbit__hub { width: 88px; }
+  .visa-orbit__hub-label { max-width: 120px; font-size: 12px; }
+  .visa-orbit__heading-label { max-width: 72px; top: calc(100% + 8px); font-size: 8px; letter-spacing: .04em; }
 }
 @media (max-width: 519px) {
-  .visa-orbit__orbit-wrap { width: min(320px, 90vw); }
-  .visa-orbit__node { --node-size: 40px; }
+  .visa-orbit__node { --node-size: 36px; }
   .visa-orbit__icon .visa-orbit__glyph,
   .visa-orbit__icon i,
-  .visa-orbit__icon svg { width: 20px; height: 20px; }
-  .visa-orbit__detail--dock.is-open { margin-top: 56px; }
+  .visa-orbit__icon svg { width: 18px; height: 18px; }
+  .visa-orbit__hub { width: 76px; }
+  .visa-orbit__hub-label { max-width: 104px; font-size: 11px; }
+  .visa-orbit__heading-label { max-width: 64px; }
+  .visa-orbit__detail--dock.is-open { margin-top: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .visa-orbit__icon,
   .visa-orbit__detail--inline,
   .visa-orbit__detail--dock,
-  .visa-orbit__hub { transition: none !important; }
-  .visa-orbit__node.is-expanded .visa-orbit__icon { --orbit-scale: 2.15; }
+  .visa-orbit__hub,
+  .visa-orbit__orbit-wrap { transition: none !important; }
   .visa-orbit__ripple { animation: none !important; opacity: 0 !important; }
   .visa-orbit__highlight { animation: none !important; }
 }

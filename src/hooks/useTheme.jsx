@@ -1,27 +1,9 @@
-import { createContext, useContext, useEffect, useState } from 'react'
-
-const ThemeContext = createContext({ theme: 'light', toggle: () => {} })
+import { useEffect } from 'react'
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light',
-  )
-
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-  }, [theme])
+    document.documentElement.setAttribute('data-theme', 'dark')
+  }, [])
 
-  const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
-
-  return (
-    <ThemeContext.Provider value={{ theme, toggle }}>
-      {children}
-    </ThemeContext.Provider>
-  )
-}
-
-export function useTheme() {
-  return useContext(ThemeContext)
+  return children
 }

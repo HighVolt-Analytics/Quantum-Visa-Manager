@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { Menu, Moon, Sun, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { NAV } from '../lib/nav'
-import { useTheme } from '../hooks/useTheme'
 import Logo from './Logo'
 
 export default function Header({ pageKey }) {
-  const { theme, toggle } = useTheme()
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const location = useLocation()
@@ -81,14 +79,6 @@ export default function Header({ pageKey }) {
             <Link className="btn btn--primary btn--sm nav-demo" to="/book-demo">
               Book a Demo
             </Link>
-            <button
-              className="icon-btn"
-              type="button"
-              onClick={toggle}
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            >
-              {theme === 'dark' ? <Sun size={18} strokeWidth={1.75} /> : <Moon size={18} strokeWidth={1.75} />}
-            </button>
             <button
               className="icon-btn menu-toggle"
               type="button"
