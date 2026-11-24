@@ -119,10 +119,48 @@ import { mountHubGlobe } from './hubGlobe.js';
   };
   window.QVM.S = S;
 
+  /* ------------------------------------------------------- LinkedIn share */
+  const SHARE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51 15.42 17.49"/><path d="M15.41 6.51 8.59 10.49"/></svg>';
+  const shareIds = new Set();
+  const shareOrigin = () => (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'https://www.quantumvisamanager.com' : location.origin);
+  const pageKey = () => {
+    const path = location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '') || '/';
+    return path === '/' ? 'home' : path.replace(/^\//, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase();
+  };
+  const escAttr = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const slugId = (text) => String(text || 'card').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'card';
+  const claimId = (base) => {
+    let id = base || 'card';
+    let n = 2;
+    while (document.getElementById(id) || shareIds.has(id)) id = `${base}-${n++}`;
+    shareIds.add(id);
+    return id;
+  };
+  const shareLink = (hash, label) => {
+    const key = `${pageKey()}--${hash}`;
+    const landing = `${location.pathname}#${hash}`;
+    const url = `${shareOrigin()}/share/${key}.html`;
+    const href = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+    return `<a class="share-link" data-share-key="${escAttr(key)}" data-share-landing="${escAttr(landing)}" href="${href}" target="_blank" rel="noopener noreferrer" aria-label="${escAttr(`Share ${label}`)}">${SHARE_SVG}</a>`;
+  };
+  const shareTarget = (el, cfg) => {
+    if (cfg && cfg.share) return cfg.share;
+    if (el.dataset.clip) {
+      if (!el.id) el.id = claimId(`clip-${el.dataset.clip}`);
+      else shareIds.add(el.id);
+      return el.id;
+    }
+    if (el.hasAttribute('data-tour')) return 'tour';
+    if (!el.id) el.id = claimId(`clip-${slugId(cfg && cfg.title)}`);
+    else shareIds.add(el.id);
+    return el.id;
+  };
+
   /* ------------------------------------------------------------ Clip player */
   function Clip(el, cfg) {
     const per = cfg.per || 5000;
     const n = cfg.scenes.length, total = n * per;
+    const share = el.closest('.modal, .modal-box') ? '' : shareLink(shareTarget(el, cfg), cfg.title || 'this visual');
     el.classList.add('clip');
     el.innerHTML = `${cfg.title ? `<div class="clip-meta"><b>${cfg.title}</b><span class="xs muted mono">${Math.round(total / 1000)} s · captioned</span></div>` : ''}
       <div style="padding:${cfg.title ? '14px 14px 0' : '0'}"><div class="clip-screen" style="border-radius:${cfg.title ? '14px' : '0'}" role="img" aria-label="${cfg.title || 'Product workflow demonstration'}">
@@ -131,7 +169,7 @@ import { mountHubGlobe } from './hubGlobe.js';
         <div class="clip-cc" aria-live="polite">${cfg.scenes[0].cc}</div></div></div>
       <div class="clip-ctrl"><button class="pp" aria-label="Pause">${I('pause')}</button><button class="rs" aria-label="Restart">${I('rotate-ccw')}</button>
         <div class="clip-track">${cfg.scenes.map(() => '<i><b></b></i>').join('')}</div><span class="clip-time">0:00</span>
-        <button class="cc-btn" aria-pressed="true" aria-label="Captions">CC</button></div>`;
+        <button class="cc-btn" aria-pressed="true" aria-label="Captions">CC</button>${share}</div>`;
     const scenes = $$('.clip-scene', el), bars = $$('.clip-track b', el), cc = $('.clip-cc', el), so = $('.signoff', el), time = $('.clip-time', el), pp = $('.pp', el);
     let t = 0, playing = !reduce && cfg.autoplay !== false, last = 0, raf, cur = -1, visible = false;
     const show = i => { if (i === cur) return; cur = i; cfg.onScene && cfg.onScene(i); scenes.forEach((s, k) => s.classList.toggle('is-on', k === i)); cc.textContent = cfg.scenes[i].cc; so.classList.toggle('is-on', !!cfg.scenes[i].signoff); };
@@ -303,7 +341,7 @@ import { mountHubGlobe } from './hubGlobe.js';
         <div class="p-col p-col--quantum"><h4><span class="dot"></span>What Quantum does</h4><p>${p.q}</p></div>
         <div class="p-col p-col--you"><h4><span class="dot"></span>Your checkpoint</h4><p>${p.you}</p></div></div></div>`;
       if (clip) clip.destroy();
-      clip = Clip($('.cdiv', detail), CLIPS[p.clip]);
+      clip = Clip($('.cdiv', detail), Object.assign({}, CLIPS[p.clip], { share: `problem-${i}` }));
       place();
       if (focus) $$('.p-btn', el)[i].focus();
     };
@@ -364,7 +402,8 @@ import { mountHubGlobe } from './hubGlobe.js';
       cur = i; const j = JOURNEY[i];
       tabs.forEach((t, k) => { t.setAttribute('aria-selected', k === i); t.tabIndex = k === i ? 0 : -1; t.classList.toggle('is-past', k < i); });
       panel.setAttribute('aria-labelledby', 'jt' + i);
-      panel.innerHTML = `<div class="j-intro"><div class="stack"><span class="eyebrow"><span class="num">Stage ${String(i + 1).padStart(2, '0')}</span> of 10</span><h3 class="h2" style="font-size:var(--text-xl)">${j[0]}</h3></div>
+      panel.id = `stage-${i}`;
+      panel.innerHTML = `<div class="j-intro"><div class="j-intro-head"><div class="stack"><span class="eyebrow"><span class="num">Stage ${String(i + 1).padStart(2, '0')}</span> of 10</span><h3 class="h2" style="font-size:var(--text-xl)">${j[0]}</h3></div>${shareLink(`stage-${i}`, j[0])}</div>
         <div class="stack"><div><div class="ui-label">Resulting status</div><div style="margin-top:8px"><span class="badge badge--live">${j[4]}</span></div></div>
         <div class="j-nav"><button class="round-btn" data-p aria-label="Previous stage" ${i === 0 ? 'disabled' : ''}>${I('arrow-left')}</button><button class="round-btn" data-n aria-label="Next stage" ${i === 9 ? 'disabled' : ''}>${I('arrow-right')}</button></div></div></div>
         <div class="j-cells"><div class="j-cell"><div class="ui-label">Trigger</div><p>${j[1]}</p></div>
@@ -383,7 +422,7 @@ import { mountHubGlobe } from './hubGlobe.js';
   }
 
   /* ---------------------------------------------------------- Ops explorer */
-  const W = (title, body) => `<div class="win win--flat"><div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-title">${title}</div></div><div class="win-body">${body}</div></div>`;
+  const W = (title, body, hash) => `<div class="win win--flat" id="${hash}"><div class="win-bar"><div class="win-dots"><i></i><i></i><i></i></div><div class="win-title">${title}</div>${shareLink(hash, title)}</div><div class="win-body">${body}</div></div>`;
   const OPS = [
     ['Document requests and reminders', 'Requests are written in your tone and reminders follow the cadence you set — until the document arrives.', () => S.list('Outstanding · VM-2041', 'Subclass 190 · 2 items', [['English test result', 'Requested 09/10 · reminder 16/10', 'warn', 'Chasing', 'tag--warn'], ['Form 80 signature', 'Requested 12/10 · reminder 19/10', 'warn', 'Chasing', 'tag--warn'], ['Birth certificate', 'Received 30/09', true, 'Received']], `<div class="ui-card ui-card--soft" style="margin-top:10px;padding:10px 12px"><div class="ui-label">Next reminder · draft</div><p class="ui-sub" style="margin-top:4px;line-height:1.5">Hi A., a quick reminder that we still need your English test result to keep your application on track…</p></div>`)],
     ['Expiry and requirement checks', 'Each document is checked for type, details, expiry and validity against the requirement set in your visa library.', () => S.checks('Checks · police_cert.pdf', [['Document type: police certificate', 'India · national level'], ['Name matches matter record', 'A. N•••••'], ['Issued 11/09/2026', 'Within your configured validity window'], ['Translation not required', 'Issued in English']])],
@@ -401,7 +440,7 @@ import { mountHubGlobe } from './hubGlobe.js';
     const stage = $('.x-stage', el), btns = $$('.x-btn', el), mq = matchMedia('(min-width: 980px)');
     let cur = 0;
     const place = () => { if (mq.matches) el.appendChild(stage); else btns[cur].after(stage); };
-    const sel = (i, f) => { cur = i; btns.forEach((b, k) => b.setAttribute('aria-selected', k === i)); stage.setAttribute('aria-labelledby', 'xt' + i); stage.innerHTML = W(`Visa operations · ${OPS[i][0]}`, OPS[i][2]()); place(); if (f) btns[i].focus(); };
+    const sel = (i, f) => { cur = i; btns.forEach((b, k) => b.setAttribute('aria-selected', k === i)); stage.setAttribute('aria-labelledby', 'xt' + i); stage.innerHTML = W(`Visa operations · ${OPS[i][0]}`, OPS[i][2](), `op-${i}`); place(); if (f) btns[i].focus(); };
     btns.forEach((b, i) => { b.addEventListener('click', () => sel(i)); b.addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); sel((i + (e.key === 'ArrowDown' ? 1 : OPS.length - 1)) % OPS.length, true); } }); });
     mq.addEventListener('change', place);
     sel(0);
@@ -910,6 +949,70 @@ import { mountHubGlobe } from './hubGlobe.js';
     if (videos) io.observe(videos);
   }
 
+  function addShare(el, label) {
+    if (!el || el.querySelector(':scope > .share-link') || el.closest('.clip, .win, .j-panel, .modal, .modal-box')) return;
+    if (el.querySelector('form') || el.hasAttribute('data-clarity-mask') || el.hasAttribute('data-demo-form')) return;
+    const title = (label || (el.querySelector('h1, h2, h3, h4') && el.querySelector('h1, h2, h3, h4').textContent) || 'this card').replace(/\s+/g, ' ').trim();
+    if (!el.id) el.id = claimId(slugId(title));
+    else shareIds.add(el.id);
+    el.insertAdjacentHTML('afterbegin', shareLink(el.id, title));
+  }
+  function mountShares(root) {
+    $$('.win', root).forEach((win) => {
+      if ($('.share-link', win)) return;
+      const bar = $('.win-bar', win);
+      if (!bar) return;
+      const title = (($('.win-title', win) && $('.win-title', win).textContent) || 'Visual').replace(/\s+/g, ' ').trim();
+      if (!win.id) win.id = claimId(slugId(title));
+      else shareIds.add(win.id);
+      bar.insertAdjacentHTML('beforeend', shareLink(win.id, title));
+    });
+    $$('.diff-col', root).forEach((col) => {
+      if ($('.share-link', col)) return;
+      const title = (($('h3', col) && $('h3', col).textContent) || 'Comparison').trim();
+      if (!col.id) col.id = claimId(`diff-${slugId(title)}`);
+      else shareIds.add(col.id);
+      const head = $('.diff-head', col);
+      const badge = head && $('.badge', head);
+      const html = shareLink(col.id, title);
+      if (badge) badge.insertAdjacentHTML('beforebegin', html);
+      else if (head) head.insertAdjacentHTML('beforeend', html);
+    });
+    $$('.hero-video', root).forEach((el) => {
+      if ($('.share-link', el)) return;
+      if (!el.id) el.id = claimId('hero-walkthrough');
+      else shareIds.add(el.id);
+      const meta = $('.hero-video__meta', el);
+      if (meta) meta.insertAdjacentHTML('beforeend', shareLink(el.id, 'Product walkthrough'));
+    });
+    $$('.growth-hero, .matrix, .outcome, .step3', root).forEach((el) => addShare(el));
+    $$('.card, .panel', root).forEach((el) => { if (el.tagName === 'DIV') addShare(el); });
+  }
+  function openSharedCard() {
+    const id = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+    if (!id) return;
+    const scrollToId = (targetId) => {
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 60;
+      const top = el.getBoundingClientRect().top + window.scrollY - headerH - 12;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+    };
+    if (/^problem-\d+$/.test(id) && window.QVM.selectProblem) {
+      window.QVM.selectProblem(id.slice('problem-'.length));
+      return;
+    }
+    if (/^op-\d+$/.test(id)) {
+      const btn = document.getElementById(`xt${id.slice(3)}`);
+      if (btn) btn.click();
+    }
+    if (/^stage-\d+$/.test(id)) {
+      const btn = document.getElementById(`jt${id.slice(6)}`);
+      if (btn) btn.click();
+    }
+    requestAnimationFrame(() => scrollToId(id));
+  }
+
   /* -------------------------------------------------------------- Boot (React-friendly) */
   function bootWidgets(root = document) {
     if (root.dataset.qvmBooted === '1') return;
@@ -947,6 +1050,8 @@ import { mountHubGlobe } from './hubGlobe.js';
     });
     scope('[data-switch]').forEach((s) => s.addEventListener('click', () => s.setAttribute('aria-checked', s.getAttribute('aria-checked') !== 'true')));
     icons();
+    mountShares(root);
+    openSharedCard();
     // Reveal only within this page root
     const els = scope('.reveal');
     if (reduce || !('IntersectionObserver' in window)) { els.forEach((e) => e.classList.add('is-in')); }
